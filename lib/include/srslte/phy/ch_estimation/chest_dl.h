@@ -150,7 +150,7 @@ SRSLTE_API void srslte_chest_dl_res_free(srslte_chest_dl_res_t* q);
 
 /* These functions change the internal object state */
 
-SRSLTE_API int srslte_chest_dl_set_mbsfn_area_id(srslte_chest_dl_t* q, uint16_t mbsfn_area_id);
+SRSLTE_API int srslte_chest_dl_set_mbsfn_area_id(srslte_chest_dl_t* q, uint16_t mbsfn_area_id, srslte_scs_t subcarrier_spacing);
 
 SRSLTE_API int srslte_chest_dl_set_cell(srslte_chest_dl_t* q, srslte_cell_t cell);
 

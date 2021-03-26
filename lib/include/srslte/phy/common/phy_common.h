@@ -78,6 +78,7 @@ extern "C" {
 
 typedef enum { SRSLTE_CP_NORM = 0, SRSLTE_CP_EXT } srslte_cp_t;
 typedef enum { SRSLTE_SF_NORM = 0, SRSLTE_SF_MBSFN } srslte_sf_t;
+typedef enum { SRSLTE_SCS_15KHZ = 0, SRSLTE_SCS_7KHZ5, SRSLTE_SCS_1KHZ25  } srslte_scs_t;
 
 #define SRSLTE_INVALID_RNTI 0x0 // TS 36.321 - Table 7.1-1 RNTI 0x0 isn't a valid DL RNTI
 #define SRSLTE_CRNTI_START 0x000B
@@ -85,6 +86,7 @@ typedef enum { SRSLTE_SF_NORM = 0, SRSLTE_SF_MBSFN } srslte_sf_t;
 #define SRSLTE_RARNTI_START 0x0001
 #define SRSLTE_RARNTI_END 0x000A
 #define SRSLTE_SIRNTI 0xFFFF
+#define SRSLTE_SIRNTI_MBMS_DEDICATED 0xFFF9
 #define SRSLTE_PRNTI 0xFFFE
 #define SRSLTE_MRNTI 0xFFFD
 
@@ -101,6 +103,9 @@ typedef enum { SRSLTE_SF_NORM = 0, SRSLTE_SF_MBSFN } srslte_sf_t;
 
 #define SRSLTE_MAX_PRB 110
 #define SRSLTE_NRE 12
+#define SRSLTE_NRE_SCS_7KHZ5 24
+#define SRSLTE_NRE_SCS_1KHZ25 144
+#define SRSLTE_NRE_SCS(scs) (scs == SRSLTE_SCS_15KHZ ? SRSLTE_NRE : (scs == SRSLTE_SCS_7KHZ5 ? SRSLTE_NRE_SCS_7KHZ5 : SRSLTE_NRE_SCS_1KHZ25))
 
 #define SRSLTE_SYMBOL_SZ_MAX 2048
 
@@ -114,6 +119,13 @@ typedef enum { SRSLTE_SF_NORM = 0, SRSLTE_SF_MBSFN } srslte_sf_t;
 #define SRSLTE_CP_EXT_LEN 512
 #define SRSLTE_CP_EXT_7_5_LEN 1024
 
+#define SRSLTE_CP_SCS_7KHZ5_NSYMB  3
+#define SRSLTE_CP_SCS_1KHZ25_NSYMB 1
+#define SRSLTE_CP_MBSFN_LEN(scs) (scs == SRSLTE_SCS_1KHZ25 ? 6144 : (scs == SRSLTE_SCS_7KHZ5 ? 1024 : SRSLTE_CP_EXT_LEN))
+
+#define SRSLTE_MBSFN_NOF_SLOTS(scs) (scs == SRSLTE_SCS_1KHZ25 ? 1 : 2) 
+#define SRSLTE_MBSFN_NOF_SYMBOLS(scs) (scs == SRSLTE_SCS_1KHZ25 ? SRSLTE_CP_SCS_1KHZ25_NSYMB : (scs == SRSLTE_SCS_7KHZ5 ? SRSLTE_CP_SCS_7KHZ5_NSYMB : SRSLTE_CP_EXT_NSYMB )) 
+
 #define SRSLTE_CP_ISNORM(cp) (cp == SRSLTE_CP_NORM)
 #define SRSLTE_CP_ISEXT(cp) (cp == SRSLTE_CP_EXT)
 #define SRSLTE_CP_NSYMB(cp) (SRSLTE_CP_ISNORM(cp) ? SRSLTE_CP_NORM_NSYMB : SRSLTE_CP_EXT_NSYMB)
@@ -122,6 +134,7 @@ typedef enum { SRSLTE_SF_NORM = 0, SRSLTE_SF_MBSFN } srslte_sf_t;
 #define SRSLTE_CP_LEN_NORM(symbol, symbol_sz)                                                                          \
   (((symbol) == 0) ? SRSLTE_CP_LEN((symbol_sz), SRSLTE_CP_NORM_0_LEN) : SRSLTE_CP_LEN((symbol_sz), SRSLTE_CP_NORM_LEN))
 #define SRSLTE_CP_LEN_EXT(symbol_sz) (SRSLTE_CP_LEN((symbol_sz), SRSLTE_CP_EXT_LEN))
+#define SRSLTE_CP_LEN_MBSFN_SCS(symbol_sz, scs) (SRSLTE_CP_LEN((symbol_sz), SRSLTE_CP_MBSFN_LEN(scs)))
 
 #define SRSLTE_CP_SZ(symbol_sz, cp)                                                                                    \
   (SRSLTE_CP_LEN(symbol_sz, (SRSLTE_CP_ISNORM(cp) ? SRSLTE_CP_NORM_LEN : SRSLTE_CP_EXT_LEN)))
@@ -148,6 +161,7 @@ typedef enum { SRSLTE_SF_NORM = 0, SRSLTE_SF_MBSFN } srslte_sf_t;
 #define SRSLTE_SLOT_IDX_CPEXT(idx, symbol_sz) (idx * (symbol_sz + SRSLTE_CP(symbol_sz, SRSLTE_CP_EXT_LEN)))
 
 #define SRSLTE_RE_IDX(nof_prb, symbol_idx, sample_idx) ((symbol_idx) * (nof_prb) * (SRSLTE_NRE) + sample_idx)
+#define SRSLTE_RE_IDX_MBSFN(nof_prb, symbol_idx, sample_idx, scs) ((symbol_idx) * (nof_prb) * (SRSLTE_NRE_SCS(scs)) + sample_idx)
 
 #define SRSLTE_RS_VSHIFT(cell_id) (cell_id % 6)
 
@@ -158,6 +172,16 @@ typedef enum { SRSLTE_SF_NORM = 0, SRSLTE_SF_MBSFN } srslte_sf_t;
 #define SRSLTE_NOF_CTRL_SYMBOLS(cell, cfi) (cfi + (cell.nof_prb < 10 ? 1 : 0))
 
 #define SRSLTE_SYMBOL_HAS_REF_MBSFN(l, s) ((l == 2 && s == 0) || (l == 0 && s == 1) || (l == 4 && s == 1))
+#define SRSLTE_SYMBOL_HAS_REF_MBSFN_7KHZ5(l, s) ((l == 1 && s == 0) || (l == 0 && s == 1) || (l == 2 && s == 1))
+#define SRSLTE_SYMBOL_HAS_REF_MBSFN_1KHZ25(l, s) (true)
+#define SRSLTE_SYMBOL_HAS_REF_MBSFN_SCS(l, s, scs) (scs == SRSLTE_SCS_15KHZ ? SRSLTE_SYMBOL_HAS_REF_MBSFN(l, s) : \
+    (scs == SRSLTE_SCS_7KHZ5 ? SRSLTE_SYMBOL_HAS_REF_MBSFN_7KHZ5(l, s) : SRSLTE_SYMBOL_HAS_REF_MBSFN_1KHZ25(l, s)))
+
+#define SRSLTE_SYMBOL_REF_OFFSET_MBSFN(l, s) ((l == 2 && s == 0) || (l == 0 && s == 1) || (l == 4 && s == 1))
+#define SRSLTE_SYMBOL_HAS_REF_MBSFN_7KHZ5(l, s) ((l == 1 && s == 0) || (l == 0 && s == 1) || (l == 2 && s == 1))
+#define SRSLTE_SYMBOL_HAS_REF_MBSFN_1KHZ25(l, s) (true)
+#define SRSLTE_SYMBOL_HAS_REF_MBSFN_SCS(l, s, scs) (scs == SRSLTE_SCS_15KHZ ? SRSLTE_SYMBOL_HAS_REF_MBSFN(l, s) : \
+    (scs == SRSLTE_SCS_7KHZ5 ? SRSLTE_SYMBOL_HAS_REF_MBSFN_7KHZ5(l, s) : SRSLTE_SYMBOL_HAS_REF_MBSFN_1KHZ25(l, s)))
 
 #define SRSLTE_NON_MBSFN_REGION_GUARD_LENGTH(non_mbsfn_region, symbol_sz)                                              \
   ((non_mbsfn_region == 1)                                                                                             \
@@ -238,7 +262,9 @@ typedef struct SRSLTE_API {
   srslte_phich_length_t phich_length;
   srslte_phich_r_t      phich_resources;
   srslte_frame_type_t   frame_type;
-} srslte_cell_t;
+  bool                  mbms_dedicated;
+  uint8_t               additional_non_mbms_frames;
+  } srslte_cell_t;
 
 // Common downlink properties that may change every subframe
 typedef struct SRSLTE_API {
@@ -247,6 +273,7 @@ typedef struct SRSLTE_API {
   uint32_t            cfi;
   srslte_sf_t         sf_type;
   uint32_t            non_mbsfn_region;
+  srslte_scs_t        subcarrier_spacing;
 } srslte_dl_sf_cfg_t;
 
 typedef struct SRSLTE_API {
@@ -431,6 +458,8 @@ SRSLTE_API bool srslte_N_id_1_isvalid(uint32_t N_id_1);
 SRSLTE_API bool srslte_symbol_sz_isvalid(uint32_t symbol_sz);
 
 SRSLTE_API int srslte_symbol_sz(uint32_t nof_prb);
+
+SRSLTE_API int srslte_symbol_sz_scs(uint32_t nof_prb, srslte_scs_t subcarrier_spacing);
 
 SRSLTE_API int srslte_symbol_sz_power2(uint32_t nof_prb);
 

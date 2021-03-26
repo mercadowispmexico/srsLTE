@@ -928,6 +928,11 @@ mbsfn_area_info_t make_mbsfn_area_info(const asn1::rrc::mbsfn_area_info_r9_s& as
       (mbsfn_area_info_t::mcch_cfg_t::mod_period_t)asn1_type.mcch_cfg_r9.mcch_mod_period_r9.value;
   ret.mcch_cfg.sf_alloc_info = asn1_type.mcch_cfg_r9.sf_alloc_info_r9.to_number();
   ret.mcch_cfg.sig_mcs       = (mbsfn_area_info_t::mcch_cfg_t::sig_mcs_t)asn1_type.mcch_cfg_r9.sig_mcs_r9.value;
+  if (asn1_type.subcarrier_spacing_mbms_r14_present) {
+    ret.subcarrier_spacing = (mbsfn_area_info_t::subcarrier_spacing_t)asn1_type.subcarrier_spacing_mbms_r14.value;
+  } else {
+    ret.subcarrier_spacing = mbsfn_area_info_t::subcarrier_spacing_t::nulltype;
+  }
   return ret;
 }
 

@@ -147,6 +147,7 @@ typedef struct SRSLTE_API {
   #ifdef MEASURE_EXEC_TIME
   float mean_exec_time;
   #endif
+
 } srslte_ue_sync_t;
 
 SRSLTE_API int srslte_ue_sync_init(srslte_ue_sync_t *q, 

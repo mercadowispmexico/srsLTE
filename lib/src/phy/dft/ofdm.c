@@ -33,14 +33,14 @@
 #include "srslte/phy/utils/vector.h"
 
 /* Uncomment next line for avoiding Guru DFT call */
-//#define AVOID_GURU
+#define AVOID_GURU
 
 static int ofdm_init_mbsfn_(srslte_ofdm_t* q, srslte_ofdm_cfg_t* cfg, srslte_dft_dir_t dir)
 {
 
   // If the symbol size is not given, calculate in function of the number of resource blocks
   if (cfg->symbol_sz == 0) {
-    int symbol_sz_err = srslte_symbol_sz(cfg->nof_prb);
+    int symbol_sz_err = srslte_symbol_sz_scs(cfg->nof_prb, cfg->subcarrier_spacing);
     if (symbol_sz_err <= SRSLTE_SUCCESS) {
       ERROR("Invalid number of PRB %d\n", cfg->nof_prb);
       return SRSLTE_ERROR;
@@ -53,6 +53,7 @@ static int ofdm_init_mbsfn_(srslte_ofdm_t* q, srslte_ofdm_cfg_t* cfg, srslte_dft
     q->cfg.cp        = cfg->cp;
     q->cfg.nof_prb   = cfg->nof_prb;
     q->cfg.symbol_sz = cfg->symbol_sz;
+    q->cfg.subcarrier_spacing = cfg->subcarrier_spacing;
   } else {
     // Otherwise copy all parameters
     q->cfg = *cfg;
@@ -64,8 +65,25 @@ static int ofdm_init_mbsfn_(srslte_ofdm_t* q, srslte_ofdm_cfg_t* cfg, srslte_dft
 
   // Set OFDM object attributes
   q->nof_symbols       = SRSLTE_CP_NSYMB(cp);
-  q->nof_symbols_mbsfn = SRSLTE_CP_NSYMB(SRSLTE_CP_EXT);
-  q->nof_re            = cfg->nof_prb * SRSLTE_NRE;
+
+  // FeMBMS numerologies
+  switch( q->cfg.subcarrier_spacing ) {
+    case SRSLTE_SCS_15KHZ:
+      q->nof_symbols_mbsfn = SRSLTE_CP_NSYMB(SRSLTE_CP_EXT);
+      q->nof_re            = cfg->nof_prb * SRSLTE_NRE;
+      q->non_mbsfn_region  = 2;
+      break;
+    case SRSLTE_SCS_7KHZ5:
+      q->nof_symbols_mbsfn = SRSLTE_CP_SCS_7KHZ5_NSYMB;
+      q->nof_re            = cfg->nof_prb * SRSLTE_NRE_SCS_7KHZ5;
+      q->non_mbsfn_region  = -1;
+      break;
+    case SRSLTE_SCS_1KHZ25:
+      q->nof_symbols_mbsfn = SRSLTE_CP_SCS_1KHZ25_NSYMB;
+      q->nof_re            = cfg->nof_prb * SRSLTE_NRE_SCS_1KHZ25;
+      q->non_mbsfn_region  = -1;
+      break;
+  }
   q->nof_guards        = (q->cfg.symbol_sz - q->nof_re) / 2U;
   q->slot_sz           = (uint32_t)SRSLTE_SLOT_LEN(q->cfg.symbol_sz);
   q->sf_sz             = (uint32_t)SRSLTE_SF_LEN(q->cfg.symbol_sz);
@@ -200,7 +218,6 @@ static int ofdm_init_mbsfn_(srslte_ofdm_t* q, srslte_ofdm_cfg_t* cfg, srslte_dft
   // MBSFN logic
   if (sf_type == SRSLTE_SF_MBSFN) {
     q->mbsfn_subframe   = true;
-    q->non_mbsfn_region = 2; // default set to 2
   } else {
     q->mbsfn_subframe = false;
   }
@@ -313,11 +330,18 @@ int srslte_ofdm_tx_init_mbsfn(srslte_ofdm_t* q, srslte_cp_t cp, cf_t* in_buffer,
 
 int srslte_ofdm_rx_set_prb(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb)
 {
+  return srslte_ofdm_rx_set_prb_scs(q, cp, nof_prb, SRSLTE_SCS_15KHZ);
+}
+
+int srslte_ofdm_rx_set_prb_scs(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, srslte_scs_t subcarrier_spacing)
+{
   srslte_ofdm_cfg_t cfg = {};
   cfg.cp                = cp;
   cfg.nof_prb           = nof_prb;
+  cfg.subcarrier_spacing = subcarrier_spacing;
   return ofdm_init_mbsfn_(q, &cfg, SRSLTE_DFT_FORWARD);
 }
+
 
 int srslte_ofdm_tx_set_prb(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb)
 {
@@ -429,15 +453,19 @@ static void ofdm_rx_slot(srslte_ofdm_t* q, int slot_in_sf)
 static void ofdm_rx_slot_mbsfn(srslte_ofdm_t* q, cf_t* input, cf_t* output)
 {
   uint32_t i;
-  for (i = 0; i < q->nof_symbols_mbsfn; i++) {
+  for (i = 0; i < q->nof_symbols_mbsfn * SRSLTE_MBSFN_NOF_SLOTS(q->cfg.subcarrier_spacing); i++) {
     if (i == q->non_mbsfn_region) {
       input += SRSLTE_NON_MBSFN_REGION_GUARD_LENGTH(q->non_mbsfn_region, q->cfg.symbol_sz);
     }
-    input += (i >= q->non_mbsfn_region) ? SRSLTE_CP_LEN_EXT(q->cfg.symbol_sz) : SRSLTE_CP_LEN_NORM(i, q->cfg.symbol_sz);
+    if (q->cfg.subcarrier_spacing != SRSLTE_SCS_15KHZ) {
+      input += q->cfg.symbol_sz / 4U;
+    } else {
+      input += (i >= q->non_mbsfn_region) ? SRSLTE_CP_LEN_EXT(q->cfg.symbol_sz) : SRSLTE_CP_LEN_NORM(i, q->cfg.symbol_sz);
+    }
     srslte_dft_run_c(&q->fft_plan, input, q->tmp);
     memcpy(output, &q->tmp[q->nof_guards], q->nof_re * sizeof(cf_t));
     input += q->cfg.symbol_sz;
-    output += q->nof_re;
+    output += q->nof_re; 
   }
 }
 
@@ -466,7 +494,10 @@ void srslte_ofdm_rx_sf(srslte_ofdm_t* q)
     }
   } else {
     ofdm_rx_slot_mbsfn(q, q->cfg.in_buffer, q->cfg.out_buffer);
-    ofdm_rx_slot(q, 1);
+    if (q->non_mbsfn_region != -1) {
+      ofdm_rx_slot(q, 1);
+    }
+
   }
 }
 

@@ -33,7 +33,9 @@ srslte_cell_t cell = {6,              // nof_prb
                       SRSLTE_CP_NORM, // cyclic prefix
                       SRSLTE_PHICH_NORM,
                       SRSLTE_PHICH_R_1_6,
-                      SRSLTE_FDD};
+                      SRSLTE_FDD,
+                      false,           // MBMS dedicated cell
+                      0};              // additional non-MBMS subframes
 
 char* output_matlab = NULL;
 

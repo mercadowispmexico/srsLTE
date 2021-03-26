@@ -34,7 +34,9 @@ static srslte_cell_t cell = {50,             // nof_prb
                              SRSLTE_CP_NORM, // cyclic prefix
                              SRSLTE_PHICH_NORM,
                              SRSLTE_PHICH_R_1, // PHICH length
-                             SRSLTE_FDD};
+                             SRSLTE_FDD,
+                             false,           // MBMS dedicated cell
+                             0};              // additional non-MBMS subframes
 
 typedef struct {
   srslte_dmrs_pdsch_mapping_type_t mapping_type;

@@ -120,11 +120,11 @@ public:
 
   phy_cell_t                 phy_cell = {0, 0, 0};
   bool                       has_mcch = false;
-  asn1::rrc::sib_type1_s     sib1     = {};
-  asn1::rrc::sib_type2_s     sib2     = {};
-  asn1::rrc::sib_type3_s     sib3     = {};
-  asn1::rrc::sib_type13_r9_s sib13    = {};
-  asn1::rrc::mcch_msg_s      mcch     = {};
+  asn1::rrc::sib_type1_s     sib1;
+  asn1::rrc::sib_type2_s     sib2;
+  asn1::rrc::sib_type3_s     sib3;
+  asn1::rrc::sib_type13_r9_s sib13;
+  asn1::rrc::mcch_msg_s      mcch;
   srslte::unique_timer       timer;
 
 private:

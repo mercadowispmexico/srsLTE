@@ -107,7 +107,7 @@ int srslte_enb_dl_init(srslte_enb_dl_t* q, cf_t* out_buffer[SRSLTE_MAX_PORTS], u
       goto clean_exit;
     }
 
-    if (srslte_refsignal_mbsfn_init(&q->mbsfnr_signal, max_prb)) {
+    if (srslte_refsignal_mbsfn_init(&q->mbsfnr_signal, max_prb, SRSLTE_SCS_15KHZ)) {
       ERROR("Error initializing CSR signal (%d)\n", ret);
       goto clean_exit;
     }
@@ -210,7 +210,7 @@ int srslte_enb_dl_set_cell(srslte_enb_dl_t* q, srslte_cell_t cell)
         return SRSLTE_ERROR;
       }
       int mbsfn_area_id = 1;
-      if (srslte_refsignal_mbsfn_set_cell(&q->mbsfnr_signal, q->cell, mbsfn_area_id)) {
+      if (srslte_refsignal_mbsfn_set_cell(&q->mbsfnr_signal, q->cell, mbsfn_area_id, SRSLTE_SCS_15KHZ)) {
         ERROR("Error initializing MBSFNR signal (%d)\n", ret);
         return SRSLTE_ERROR;
       }

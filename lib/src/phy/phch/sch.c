@@ -32,6 +32,8 @@
 #include <string.h>
 #include <strings.h>
 
+#define CALCULATE_BER
+
 #define SRSLTE_PDSCH_MAX_TDEC_ITERS 10
 
 #ifdef LV_HAVE_SSE
@@ -449,7 +451,26 @@ bool decode_tb_cb(srslte_sch_t*           q,
 
       } while (cb_noi < q->max_iterations && !early_stop);
 
-      INFO("CB %d: rp=%d, n_e=%d, cb_len=%d, CRC=%s, rlen=%d, iterations=%d/%d\n",
+      unsigned bit_errors = 0;
+#ifdef CALCULATE_BER
+      uint8_t decoded[rlen];
+      srslte_bit_unpack_vector(&data[cb_idx * rlen / 8], decoded, rlen);
+
+      int enc_len = rlen * 3 + 12;
+      uint8_t reencoded[enc_len];
+      srslte_tcod_encode(&q->encoder, decoded, reencoded, rlen) ;
+
+      for (int k = 0; k < enc_len; k++)
+      {
+        if( ( softbuffer->buffer_f[cb_idx][k] <= 0 && reencoded[k] ) ||
+            ( softbuffer->buffer_f[cb_idx][k] > 0 && !reencoded[k] ) ) {
+          bit_errors++;
+        }
+      }
+      softbuffer->ber = (bit_errors * 1.0) / (rlen * 3.0);
+#endif
+
+      INFO("CB %d: rp=%d, n_e=%d, cb_len=%d, CRC=%s, rlen=%d, iterations=%d/%d, ber=%f\n",
            cb_idx,
            rp,
            n_e2,
@@ -457,7 +478,8 @@ bool decode_tb_cb(srslte_sch_t*           q,
            early_stop ? "OK" : "KO",
            rlen,
            cb_noi,
-           q->max_iterations);
+           q->max_iterations,
+           (bit_errors * 1.0) / (rlen * 3.0));
 
     } else {
       // Copy decoded data from previous transmissions

@@ -45,6 +45,8 @@ static int test_pucch_ca(srslte_ack_nack_feedback_mode_t ack_nack_feedback_mode,
       SRSLTE_PHICH_NORM,  // PHICH length
       SRSLTE_PHICH_R_1_6, // PHICH resources
       SRSLTE_FDD,
+      false,           // MBMS dedicated cell
+      0
   };
 
   cf_t*                             buffer         = NULL;

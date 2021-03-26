@@ -35,8 +35,10 @@ srslte_cell_t cell = {
     SRSLTE_PHICH_NORM, // PHICH length
     SRSLTE_PHICH_R_1_6,
     SRSLTE_FDD,
+    false,           // MBMS dedicated cell
+    0
+};              // additional non-MBMS subframes
 
-};
 
 srslte_phich_r_t      phich_res    = SRSLTE_PHICH_R_1;
 srslte_phich_length_t phich_length = SRSLTE_PHICH_NORM;

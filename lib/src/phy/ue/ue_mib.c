@@ -31,7 +31,8 @@
 #include "srslte/phy/utils/debug.h"
 #include "srslte/phy/utils/vector.h"
 
-#define MIB_BUFFER_MAX_SAMPLES (3 * SRSLTE_SF_LEN_PRB(SRSLTE_UE_MIB_NOF_PRB))
+#define MIB_BUFFER_MAX_SAMPLES_FOR_PRB(prb)   (8 * SRSLTE_SF_LEN_PRB(prb))
+#define MIB_BUFFER_MAX_SAMPLES                MIB_BUFFER_MAX_SAMPLES_FOR_PRB(SRSLTE_UE_MIB_NOF_PRB)
 
 int srslte_ue_mib_init(srslte_ue_mib_t* q, cf_t* in_buffer, uint32_t max_prb)
 {
@@ -150,7 +151,7 @@ int srslte_ue_mib_decode(srslte_ue_mib_t* q,
     return SRSLTE_ERROR;
   }
   /* Reset decoder if we missed a frame */
-  if (q->frame_cnt > 8) {
+  if (q->frame_cnt > 80) {
     INFO("Resetting PBCH decoder after %d frames\n", q->frame_cnt);
     srslte_ue_mib_reset(q);
   }
@@ -177,19 +178,28 @@ int srslte_ue_mib_sync_init_multi(srslte_ue_mib_sync_t* q,
                                   uint32_t nof_rx_channels,
                                   void*    stream_handler)
 {
+  return srslte_ue_mib_sync_init_multi_prb(q, recv_callback, nof_rx_channels, stream_handler, SRSLTE_UE_MIB_NOF_PRB);
+}
+
+int srslte_ue_mib_sync_init_multi_prb(srslte_ue_mib_sync_t* q,
+                                  int(recv_callback)(void*, cf_t* [SRSLTE_MAX_CHANNELS], uint32_t, srslte_timestamp_t*),
+                                  uint32_t nof_rx_channels,
+                                  void*    stream_handler,
+                                  uint8_t nof_prb)
+{
   for (int i = 0; i < nof_rx_channels; i++) {
     q->sf_buffer[i] = srslte_vec_cf_malloc(MIB_BUFFER_MAX_SAMPLES);
   }
   q->nof_rx_channels = nof_rx_channels;
 
   // Use 1st RF channel only to receive MIB
-  if (srslte_ue_mib_init(&q->ue_mib, q->sf_buffer[0], SRSLTE_UE_MIB_NOF_PRB)) {
+  if (srslte_ue_mib_init(&q->ue_mib, q->sf_buffer[0], nof_prb)) {
     ERROR("Error initiating ue_mib\n");
     return SRSLTE_ERROR;
   }
   // Configure ue_sync to receive all channels
   if (srslte_ue_sync_init_multi(
-          &q->ue_sync, SRSLTE_UE_MIB_NOF_PRB, false, recv_callback, nof_rx_channels, stream_handler)) {
+          &q->ue_sync, nof_prb, false, recv_callback, nof_rx_channels, stream_handler)) {
     fprintf(stderr, "Error initiating ue_sync\n");
     srslte_ue_mib_free(&q->ue_mib);
     return SRSLTE_ERROR;
@@ -199,11 +209,15 @@ int srslte_ue_mib_sync_init_multi(srslte_ue_mib_sync_t* q,
 
 int srslte_ue_mib_sync_set_cell(srslte_ue_mib_sync_t* q, srslte_cell_t cell)
 {
+  // MIB search is done at 6 PRB by default
+  return srslte_ue_mib_sync_set_cell_prb(q, cell, SRSLTE_UE_MIB_NOF_PRB);
+}
+
+int srslte_ue_mib_sync_set_cell_prb(srslte_ue_mib_sync_t* q, srslte_cell_t cell, uint8_t nof_prb)
+{
   // If the ports are set to 0, ue_mib goes through 1, 2 and 4 ports to blindly detect nof_ports
   cell.nof_ports = 0;
-
-  // MIB search is done at 6 PRB
-  cell.nof_prb = SRSLTE_UE_MIB_NOF_PRB;
+  cell.nof_prb = nof_prb;
 
   if (srslte_ue_mib_set_cell(&q->ue_mib, cell)) {
     ERROR("Error initiating ue_mib\n");
@@ -240,7 +254,16 @@ int srslte_ue_mib_sync_decode(srslte_ue_mib_sync_t* q,
                               uint32_t*             nof_tx_ports,
                               int*                  sfn_offset)
 {
+  return srslte_ue_mib_sync_decode_prb(q, max_frames_timeout, bch_payload, nof_tx_ports, sfn_offset, SRSLTE_UE_MIB_NOF_PRB);
+}
 
+int srslte_ue_mib_sync_decode_prb(srslte_ue_mib_sync_t* q,
+                              uint32_t              max_frames_timeout,
+                              uint8_t               bch_payload[SRSLTE_BCH_PAYLOAD_LEN],
+                              uint32_t*             nof_tx_ports,
+                              int*                  sfn_offset,
+                              uint8_t               nof_prb)
+{
   int      ret        = SRSLTE_ERROR_INVALID_INPUTS;
   uint32_t nof_frames = 0;
   int      mib_ret    = SRSLTE_UE_MIB_NOTFOUND;
@@ -253,13 +276,15 @@ int srslte_ue_mib_sync_decode(srslte_ue_mib_sync_t* q,
 
   do {
     mib_ret = SRSLTE_UE_MIB_NOTFOUND;
-    ret     = srslte_ue_sync_zerocopy(&q->ue_sync, q->sf_buffer, MIB_BUFFER_MAX_SAMPLES);
+    ret     = srslte_ue_sync_zerocopy(&q->ue_sync, q->sf_buffer, MIB_BUFFER_MAX_SAMPLES_FOR_PRB(nof_prb));
     if (ret < 0) {
       ERROR("Error calling srslte_ue_sync_work()\n");
       return -1;
     }
 
-    if (srslte_ue_sync_get_sfidx(&q->ue_sync) == 0) {
+        DEBUG("SFN %d SFIDX %d \n", srslte_ue_sync_get_sfn(&q->ue_sync), srslte_ue_sync_get_sfidx(&q->ue_sync));
+    if (srslte_ue_sync_get_sfn(&q->ue_sync)%4 == 0 && srslte_ue_sync_get_sfidx(&q->ue_sync) == 0) {
+    // [kku] if (srslte_ue_sync_get_sfidx(&q->ue_sync) == 0) {
       if (ret == 1) {
         mib_ret = srslte_ue_mib_decode(&q->ue_mib, bch_payload, nof_tx_ports, sfn_offset);
       } else {

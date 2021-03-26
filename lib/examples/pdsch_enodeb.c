@@ -58,6 +58,8 @@ static srslte_cell_t cell = {
     SRSLTE_PHICH_NORM, // PHICH length
     SRSLTE_PHICH_R_1,  // PHICH resources
     SRSLTE_FDD,
+    false,           // MBMS dedicated cell
+    0
 
 };
 
@@ -737,11 +739,11 @@ int main(int argc, char** argv)
     exit(-1);
   }
   if (mbsfn_area_id > -1) {
-    if (srslte_refsignal_mbsfn_init(&mbsfn_refs, cell.nof_prb)) {
+    if (srslte_refsignal_mbsfn_init(&mbsfn_refs, cell.nof_prb, SRSLTE_SCS_15KHZ)) {
       ERROR("Error initializing equalizer\n");
       exit(-1);
     }
-    if (srslte_refsignal_mbsfn_set_cell(&mbsfn_refs, cell, mbsfn_area_id)) {
+    if (srslte_refsignal_mbsfn_set_cell(&mbsfn_refs, cell, mbsfn_area_id, SRSLTE_SCS_15KHZ)) {
       ERROR("Error initializing MBSFNR signal\n");
       exit(-1);
     }

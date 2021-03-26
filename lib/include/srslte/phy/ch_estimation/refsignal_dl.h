@@ -34,14 +34,14 @@
 #include "srslte/phy/common/phy_common.h"
 
 // Number of references in a subframe: there are 2 symbols for port_id=0,1 x 2 slots x 2 refs per prb
-#define SRSLTE_REFSIGNAL_NUM_SF_MBSFN(nof_prb, port_id) ((2 + 18) * (nof_prb))
+#define SRSLTE_REFSIGNAL_NUM_SF_MBSFN(nof_prb, scs) ( ( (scs == SRSLTE_SCS_15KHZ ? 2 : 0) + srslte_refsignal_mbsfn_rs_per_rb(scs) ) * (nof_prb))
 
 #define SRSLTE_REFSIGNAL_MAX_NUM_SF(nof_prb) (8 * nof_prb)
-#define SRSLTE_REFSIGNAL_MAX_NUM_SF_MBSFN(nof_prb) SRSLTE_REFSIGNAL_NUM_SF_MBSFN(nof_prb, 0)
+#define SRSLTE_REFSIGNAL_MAX_NUM_SF_MBSFN(nof_prb) SRSLTE_REFSIGNAL_NUM_SF_MBSFN(nof_prb, SRSLTE_SCS_1KHZ25)
 
 #define SRSLTE_REFSIGNAL_PILOT_IDX(i, l, cell) (2 * cell.nof_prb * (l) + (i))
 
-#define SRSLTE_REFSIGNAL_PILOT_IDX_MBSFN(i, l, cell) ((6 * cell.nof_prb * (l) + (i)))
+#define SRSLTE_REFSIGNAL_PILOT_IDX_MBSFN(i, l, cell, scs) (((srslte_refsignal_mbsfn_rs_per_symbol(scs)) * cell.nof_prb * (l) + (i)))
 
 /** Cell-Specific Reference Signal */
 typedef struct SRSLTE_API {
@@ -78,17 +78,21 @@ SRSLTE_API uint32_t srslte_refsignal_cs_nof_pilots_x_slot(uint32_t nof_ports);
 
 SRSLTE_API uint32_t srslte_refsignal_cs_nof_re(srslte_refsignal_t* q, srslte_dl_sf_cfg_t* sf, uint32_t port_id);
 
-SRSLTE_API int srslte_refsignal_mbsfn_init(srslte_refsignal_t* q, uint32_t max_prb);
+SRSLTE_API int srslte_refsignal_mbsfn_init(srslte_refsignal_t* q, uint32_t max_prb, srslte_scs_t scs);
 
-SRSLTE_API int srslte_refsignal_mbsfn_set_cell(srslte_refsignal_t* q, srslte_cell_t cell, uint16_t mbsfn_area_id);
+SRSLTE_API int srslte_refsignal_mbsfn_set_cell(srslte_refsignal_t* q, srslte_cell_t cell, uint16_t mbsfn_area_id, srslte_scs_t scs);
 
-SRSLTE_API int srslte_refsignal_mbsfn_get_sf(srslte_cell_t cell, uint32_t port_id, cf_t* sf_symbols, cf_t* pilots);
+SRSLTE_API int srslte_refsignal_mbsfn_get_sf(srslte_cell_t cell, uint32_t port_id, cf_t* sf_symbols, cf_t* pilots, srslte_scs_t scs, uint32_t sf_idx);
 
-SRSLTE_API uint32_t srslte_refsignal_mbsfn_nsymbol(uint32_t l);
+SRSLTE_API uint32_t srslte_refsignal_mbsfn_nsymbol(uint32_t l, srslte_scs_t scs);
 
-SRSLTE_API uint32_t srslte_refsignal_mbsfn_fidx(uint32_t l);
+SRSLTE_API uint32_t srslte_refsignal_mbsfn_fidx(uint32_t l, srslte_scs_t scs);
 
 SRSLTE_API uint32_t srslte_refsignal_mbsfn_nof_symbols();
+
+SRSLTE_API uint32_t srslte_refsignal_mbsfn_rs_per_symbol(srslte_scs_t scs);
+
+SRSLTE_API uint32_t srslte_refsignal_mbsfn_rs_per_rb(srslte_scs_t scs);
 
 SRSLTE_API int srslte_refsignal_mbsfn_put_sf(srslte_cell_t cell,
                                              uint32_t      port_id,
@@ -96,6 +100,8 @@ SRSLTE_API int srslte_refsignal_mbsfn_put_sf(srslte_cell_t cell,
                                              cf_t*         mbsfn_pilots,
                                              cf_t*         sf_symbols);
 
-SRSLTE_API int srslte_refsignal_mbsfn_gen_seq(srslte_refsignal_t* q, srslte_cell_t cell, uint32_t N_mbsfn_id);
+SRSLTE_API int srslte_refsignal_mbsfn_gen_seq(srslte_refsignal_t* q, srslte_cell_t cell, uint32_t N_mbsfn_id, srslte_scs_t scs);
+
+SRSLTE_API uint32_t srslte_refsignal_mbsfn_offset(uint32_t l, uint32_t s, uint32_t sf, srslte_scs_t scs);
 
 #endif // SRSLTE_REFSIGNAL_DL_H

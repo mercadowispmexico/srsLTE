@@ -83,7 +83,7 @@ int init_sequence(srslte_sequence_t* seq, char* name)
 {
   if (!strcmp(name, "PBCH")) {
     bzero(seq, sizeof(srslte_sequence_t));
-    return srslte_sequence_pbch(seq, cp, cell_id);
+    return srslte_sequence_pbch(seq, cp, cell_id, false);
   } else if (!strcmp(name, "PDSCH")) {
     bzero(seq, sizeof(srslte_sequence_t));
     return srslte_sequence_pdsch(seq, 1234, 0, 0, cell_id, nof_bits);

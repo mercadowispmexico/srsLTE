@@ -154,6 +154,16 @@ void rlc::reestablish(uint32_t lcid)
   }
 }
 
+void rlc::stop_mch(uint32_t lcid)
+{
+  if (valid_lcid_mrb(lcid)) {
+    rlc_log->info("Stopping MRB LCID %d\n", lcid);
+    rlc_array_mrb.at(lcid)->stop();
+  } else {
+    rlc_log->warning("RLC MRB LCID %d invalid, cannot stop\n", lcid);
+  }
+}
+
 // Resetting the RLC layer returns the object to the state after the call to init():
 // All LCIDs are removed, except SRB0
 void rlc::reset()
@@ -571,6 +581,12 @@ void rlc::resume_bearer(uint32_t lcid)
 bool rlc::has_bearer(uint32_t lcid)
 {
   bool ret = valid_lcid(lcid);
+  return ret;
+}
+
+bool rlc::has_bearer_mrb(uint32_t lcid)
+{
+  bool ret = valid_lcid_mrb(lcid);
   return ret;
 }
 

@@ -58,6 +58,7 @@ typedef struct SRSLTE_API {
   float       freq_shift_f;     //< Frequency shift, normalised by sampling rate (used in UL)
   float       rx_window_offset; //< DFT Window offset in CP portion (0-1), RX only
   uint32_t    symbol_sz;        //< Symbol size, forces a given symbol size for the number of PRB
+  srslte_scs_t subcarrier_spacing; //< Subcarrier spacing 15, 7.5 or 1.25 kHz
 } srslte_ofdm_cfg_t;
 
 /**
@@ -78,7 +79,7 @@ typedef struct SRSLTE_API {
   bool              mbsfn_subframe;
   uint32_t          mbsfn_guard_len;
   uint32_t          nof_symbols_mbsfn;
-  uint8_t           non_mbsfn_region;
+  int8_t            non_mbsfn_region;
   uint32_t          window_offset_n;
   cf_t*             shift_buffer;
   cf_t*             window_offset_buffer;
@@ -97,6 +98,8 @@ srslte_ofdm_rx_init(srslte_ofdm_t* q, srslte_cp_t cp_type, cf_t* in_buffer, cf_t
 SRSLTE_API int srslte_ofdm_tx_set_prb(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb);
 
 SRSLTE_API int srslte_ofdm_rx_set_prb(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb);
+
+SRSLTE_API int srslte_ofdm_rx_set_prb_scs(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, srslte_scs_t scs);
 
 SRSLTE_API void srslte_ofdm_rx_free(srslte_ofdm_t* q);
 

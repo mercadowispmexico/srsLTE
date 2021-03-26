@@ -110,6 +110,8 @@ typedef struct SRSLTE_API {
 
   srslte_dci_location_t allocated_locations[SRSLTE_MAX_DCI_MSG];
   uint32_t              nof_allocated_locations;
+
+  srslte_scs_t        subcarrier_spacing;
 } srslte_ue_dl_t;
 
 // Downlink config (includes common and dedicated variables)
@@ -170,6 +172,8 @@ SRSLTE_API int srslte_ue_dl_set_cell(srslte_ue_dl_t* q, srslte_cell_t cell);
 SRSLTE_API void srslte_ue_dl_set_rnti(srslte_ue_dl_t* q, uint16_t rnti);
 
 SRSLTE_API int srslte_ue_dl_set_mbsfn_area_id(srslte_ue_dl_t* q, uint16_t mbsfn_area_id);
+
+SRSLTE_API int srslte_ue_dl_set_mbsfn_subcarrier_spacing(srslte_ue_dl_t* q, srslte_scs_t subcarrier_spacing);
 
 SRSLTE_API void srslte_ue_dl_set_non_mbsfn_region(srslte_ue_dl_t* q, uint8_t non_mbsfn_region_length);
 

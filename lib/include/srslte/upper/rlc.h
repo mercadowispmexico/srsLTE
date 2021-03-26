@@ -74,6 +74,7 @@ public:
   void     write_pdu_bcch_dlsch(uint8_t* payload, uint32_t nof_bytes);
   void     write_pdu_pcch(srslte::unique_byte_buffer_t pdu);
   void     write_pdu_mch(uint32_t lcid, uint8_t* payload, uint32_t nof_bytes);
+  void     stop_mch(uint32_t lcid);
 
   // RRC interface
   bool is_suspended(const uint32_t lcid);
@@ -90,6 +91,7 @@ public:
   void resume_bearer(uint32_t lcid);
   void change_lcid(uint32_t old_lcid, uint32_t new_lcid);
   bool has_bearer(uint32_t lcid);
+  bool has_bearer_mrb(uint32_t lcid);
 
 private:
   void reset_metrics();

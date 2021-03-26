@@ -88,6 +88,21 @@ srslte_ue_cellsearch_init_multi(srslte_ue_cellsearch_t* q,
                                 int(recv_callback)(void*, cf_t* [SRSLTE_MAX_CHANNELS], uint32_t, srslte_timestamp_t*),
                                 uint32_t nof_rx_antennas,
                                 void*    stream_handler);
+SRSLTE_API int
+srslte_ue_cellsearch_init_multi_prb(srslte_ue_cellsearch_t* q,
+                                uint32_t max_frames_total,
+                                int(recv_callback)(void*, cf_t* [SRSLTE_MAX_CHANNELS], uint32_t, srslte_timestamp_t*),
+                                uint32_t nof_rx_antennas,
+                                void *stream_handler,
+                                uint8_t nof_prb);
+SRSLTE_API int
+srslte_ue_cellsearch_init_multi_prb_cp(srslte_ue_cellsearch_t* q,
+                                uint32_t max_frames_total,
+                                int(recv_callback)(void*, cf_t* [SRSLTE_MAX_CHANNELS], uint32_t, srslte_timestamp_t*),
+                                uint32_t nof_rx_antennas,
+                                void *stream_handler,
+                                uint8_t nof_prb,
+                                bool search_extended_cp);
 
 SRSLTE_API void srslte_ue_cellsearch_free(srslte_ue_cellsearch_t *q);
 

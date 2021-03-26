@@ -250,7 +250,7 @@ int srslte_pbch_set_cell(srslte_pbch_t* q, srslte_cell_t cell)
 
     if (q->cell.id != cell.id || q->cell.nof_prb == 0) {
       q->cell = cell;
-      if (srslte_sequence_pbch(&q->seq, q->cell.cp, q->cell.id)) {
+      if (srslte_sequence_pbch(&q->seq, q->cell.cp, q->cell.id, q->cell.mbms_dedicated)) {
         return SRSLTE_ERROR;
       }
     }
@@ -308,6 +308,40 @@ void srslte_pbch_mib_unpack(uint8_t* msg, srslte_cell_t* cell, uint32_t* sfn)
   }
   if (sfn) {
     *sfn = srslte_bit_pack(&msg, 8) << 2;
+  }
+}
+
+/**
+ * Unpacks MIB-MBMS from PBCH message.
+ *
+ * @param[in] msg PBCH in an unpacked bit array of size 24
+ * @param[out] sfn System frame number
+ * @param[out] cell MIB information about PHICH and system bandwidth will be saved here
+ */
+void srslte_pbch_mib_mbms_unpack(uint8_t* msg, srslte_cell_t* cell, uint32_t* sfn, uint32_t* additional_non_mbsfn_subframes, int8_t override_prb)
+{
+  uint32_t bw_idx = srslte_bit_pack(&msg, 3);
+  switch (bw_idx) {
+    case 0:
+      cell->nof_prb = 6;
+      break;
+    case 1:
+      cell->nof_prb = 15;
+      break;
+    default:
+      cell->nof_prb = (bw_idx - 1) * 25;
+      break;
+  }
+  if (override_prb != -1) {
+      cell->nof_prb = override_prb;
+  }
+
+  if (sfn) {
+    *sfn = srslte_bit_pack(&msg, 6) << 4;
+  }
+
+  if (additional_non_mbsfn_subframes) {
+    *additional_non_mbsfn_subframes = *msg++;
   }
 }
 

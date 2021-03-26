@@ -36,6 +36,8 @@ srslte_cell_t cell = {
     SRSLTE_PHICH_NORM, // PHICH length
     SRSLTE_PHICH_R_1,  // PHICH resources
     SRSLTE_FDD,
+    false,           // MBMS dedicated cell
+    0
 
 };
 

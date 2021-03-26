@@ -103,6 +103,8 @@ SRSLTE_API void srslte_pbch_decode_reset(srslte_pbch_t* q);
 
 SRSLTE_API void srslte_pbch_mib_unpack(uint8_t* msg, srslte_cell_t* cell, uint32_t* sfn);
 
+SRSLTE_API void srslte_pbch_mib_mbms_unpack(uint8_t* msg, srslte_cell_t* cell, uint32_t* sfn, uint32_t* additional_non_mbsfn_subframes, int8_t override_prb);
+
 SRSLTE_API void srslte_pbch_mib_pack(srslte_cell_t* cell, uint32_t sfn, uint8_t* msg);
 
 #endif // SRSLTE_PBCH_H

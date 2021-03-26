@@ -80,6 +80,7 @@ SRSLTE_API void srslte_ue_mib_free(srslte_ue_mib_t *q);
 SRSLTE_API int srslte_ue_mib_set_cell(srslte_ue_mib_t * q,
                                       srslte_cell_t cell);
 
+
 SRSLTE_API void srslte_ue_mib_reset(srslte_ue_mib_t * q); 
 
 SRSLTE_API int srslte_ue_mib_decode(srslte_ue_mib_t * q, 
@@ -105,10 +106,18 @@ srslte_ue_mib_sync_init_multi(srslte_ue_mib_sync_t* q,
                               int(recv_callback)(void*, cf_t* [SRSLTE_MAX_CHANNELS], uint32_t, srslte_timestamp_t*),
                               uint32_t nof_rx_channels,
                               void*    stream_handler);
+SRSLTE_API int
+srslte_ue_mib_sync_init_multi_prb(srslte_ue_mib_sync_t* q,
+                              int(recv_callback)(void*, cf_t* [SRSLTE_MAX_CHANNELS], uint32_t, srslte_timestamp_t*),
+                              uint32_t nof_rx_channels,
+                              void*    stream_handler,
+                              uint8_t nof_prb);
 
 SRSLTE_API void srslte_ue_mib_sync_free(srslte_ue_mib_sync_t *q);
 
 SRSLTE_API int srslte_ue_mib_sync_set_cell(srslte_ue_mib_sync_t* q, srslte_cell_t cell);
+SRSLTE_API int srslte_ue_mib_sync_set_cell_prb(srslte_ue_mib_sync_t* q, srslte_cell_t cell,
+                                      uint8_t nof_prb);
 
 SRSLTE_API void srslte_ue_mib_sync_reset(srslte_ue_mib_sync_t * q); 
 
@@ -117,6 +126,12 @@ SRSLTE_API int srslte_ue_mib_sync_decode(srslte_ue_mib_sync_t * q,
                                          uint8_t bch_payload[SRSLTE_BCH_PAYLOAD_LEN], 
                                          uint32_t *nof_tx_ports, 
                                          int *sfn_offset); 
+SRSLTE_API int srslte_ue_mib_sync_decode_prb(srslte_ue_mib_sync_t * q, 
+                                         uint32_t max_frames_timeout,
+                                         uint8_t bch_payload[SRSLTE_BCH_PAYLOAD_LEN], 
+                                         uint32_t *nof_tx_ports, 
+                                         int *sfn_offset,
+                                         uint8_t nof_prb);
 
 
 

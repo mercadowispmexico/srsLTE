@@ -270,6 +270,10 @@ void rlc_um_lte::rlc_um_lte_rx::reestablish()
 
 void rlc_um_lte::rlc_um_lte_rx::stop()
 {
+  if (reordering_timer.is_valid() && reordering_timer.is_running()) {
+    reordering_timer.stop();
+    timer_expired(reordering_timer.id());
+  }
   reset();
 
   reordering_timer.stop();
@@ -280,6 +284,7 @@ void rlc_um_lte::rlc_um_lte_rx::reset()
   vr_ur    = 0;
   vr_ux    = 0;
   vr_uh    = 0;
+  vr_ur_in_rx_sdu = 0;
   pdu_lost = false;
 
   rx_sdu.reset();
@@ -290,6 +295,8 @@ void rlc_um_lte::rlc_um_lte_rx::reset()
 
 void rlc_um_lte::rlc_um_lte_rx::handle_data_pdu(uint8_t* payload, uint32_t nof_bytes)
 {
+  std::lock_guard<std::mutex> lock(mutex);
+
   rlc_umd_pdu_header_t header;
   rlc_um_read_data_pdu_header(payload, nof_bytes, cfg.um.rx_sn_field_length, &header);
   log->info_hex(payload, nof_bytes, "RX %s Rx data PDU SN=%d (%d B)", rb_name.c_str(), header.sn, nof_bytes);

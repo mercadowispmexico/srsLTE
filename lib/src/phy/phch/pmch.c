@@ -31,6 +31,7 @@
 #include "prb_dl.h"
 #include "srslte/phy/common/phy_common.h"
 #include "srslte/phy/phch/pmch.h"
+#include "srslte/phy/ch_estimation/refsignal_dl.h"
 #include "srslte/phy/utils/bit.h"
 #include "srslte/phy/utils/debug.h"
 #include "srslte/phy/utils/vector.h"
@@ -39,7 +40,7 @@
 
 const static srslte_mod_t modulations[4] = {SRSLTE_MOD_BPSK, SRSLTE_MOD_QPSK, SRSLTE_MOD_16QAM, SRSLTE_MOD_64QAM};
 
-static int pmch_cp(srslte_pmch_t* q, cf_t* input, cf_t* output, uint32_t lstart_grant, bool put)
+static int pmch_cp(srslte_pmch_t* q, cf_t* input, cf_t* output, uint32_t lstart_grant, bool put, srslte_scs_t scs, uint32_t sf)
 {
   uint32_t s, n, l, lp, lstart, lend, nof_refs;
   cf_t *   in_ptr = input, *out_ptr = output;
@@ -53,36 +54,30 @@ static int pmch_cp(srslte_pmch_t* q, cf_t* input, cf_t* output, uint32_t lstart_
     offset_original = input;
   }
 #endif
-  nof_refs = 6;
-  for (s = 0; s < 2; s++) {
-    for (l = 0; l < SRSLTE_CP_EXT_NSYMB; l++) {
+  nof_refs = srslte_refsignal_mbsfn_rs_per_symbol(scs);
+  for (s = 0; s < SRSLTE_MBSFN_NOF_SLOTS(scs); s++) {
+    for (l = 0; l < SRSLTE_MBSFN_NOF_SYMBOLS(scs); l++) {
       for (n = 0; n < q->cell.nof_prb; n++) {
         // If this PRB is assigned
-        if (true) {
-          if (s == 0) {
-            lstart = lstart_grant;
+        if (s == 0) {
+          lstart = lstart_grant;
+        } else {
+          lstart = 0;
+        }
+        lend = SRSLTE_MBSFN_NOF_SYMBOLS(scs);
+        lp   = l + s * SRSLTE_MBSFN_NOF_SYMBOLS(scs);
+        if (put) {
+          out_ptr = &output[(lp * q->cell.nof_prb + n) * SRSLTE_NRE_SCS(scs)];
+        } else {
+          in_ptr = &input[(lp * q->cell.nof_prb + n) * SRSLTE_NRE_SCS(scs)];
+        }
+        // This is a symbol in a normal PRB with or without references
+        if (l >= lstart && l < lend) {
+          if (SRSLTE_SYMBOL_HAS_REF_MBSFN_SCS(l, s, scs)) {
+            offset = srslte_refsignal_mbsfn_offset(l, s, sf, scs);
+            prb_cp_ref_scs(&in_ptr, &out_ptr, offset, nof_refs, nof_refs, put, scs);
           } else {
-            lstart = 0;
-          }
-          lend = SRSLTE_CP_EXT_NSYMB;
-          lp   = l + s * SRSLTE_CP_EXT_NSYMB;
-          if (put) {
-            out_ptr = &output[(lp * q->cell.nof_prb + n) * SRSLTE_NRE];
-          } else {
-            in_ptr = &input[(lp * q->cell.nof_prb + n) * SRSLTE_NRE];
-          }
-          // This is a symbol in a normal PRB with or without references
-          if (l >= lstart && l < lend) {
-            if (SRSLTE_SYMBOL_HAS_REF_MBSFN(l, s)) {
-              if (l == 0 && s == 1) {
-                offset = 1;
-              } else {
-                offset = 0;
-              }
-              prb_cp_ref(&in_ptr, &out_ptr, offset, nof_refs, nof_refs, put);
-            } else {
-              prb_cp(&in_ptr, &out_ptr, 1);
-            }
+            prb_cp_scs(&in_ptr, &out_ptr, 1, scs);
           }
         }
       }
@@ -108,7 +103,7 @@ static int pmch_cp(srslte_pmch_t* q, cf_t* input, cf_t* output, uint32_t lstart_
  */
 static int pmch_put(srslte_pmch_t* q, cf_t* symbols, cf_t* sf_symbols, uint32_t lstart)
 {
-  return pmch_cp(q, symbols, sf_symbols, lstart, true);
+  return pmch_cp(q, symbols, sf_symbols, lstart, true, SRSLTE_SCS_15KHZ, 0);
 }
 
 /**
@@ -118,9 +113,9 @@ static int pmch_put(srslte_pmch_t* q, cf_t* symbols, cf_t* sf_symbols, uint32_t 
  *
  * 36.211 10.3 section 6.3.5
  */
-static int pmch_get(srslte_pmch_t* q, cf_t* sf_symbols, cf_t* symbols, uint32_t lstart)
+static int pmch_get(srslte_pmch_t* q, cf_t* sf_symbols, cf_t* symbols, uint32_t lstart, srslte_scs_t scs, uint32_t sf)
 {
-  return pmch_cp(q, sf_symbols, symbols, lstart, false);
+  return pmch_cp(q, sf_symbols, symbols, lstart, false, scs, sf);
 }
 
 int srslte_pmch_init(srslte_pmch_t* q, uint32_t max_prb, uint32_t nof_rx_antennas)
@@ -242,8 +237,8 @@ int srslte_pmch_set_cell(srslte_pmch_t* q, srslte_cell_t cell)
     q->max_re = q->cell.nof_prb * MAX_PMCH_RE;
 
     INFO("PMCH: Cell config PCI=%d, %d ports, %d PRBs, max_symbols: %d\n",
-         q->cell.nof_ports,
          q->cell.id,
+         q->cell.nof_ports,
          q->cell.nof_prb,
          q->max_re);
 
@@ -319,7 +314,7 @@ int srslte_pmch_decode(srslte_pmch_t*         q,
     uint32_t lstart = SRSLTE_NOF_CTRL_SYMBOLS(q->cell, sf->cfi);
     for (int j = 0; j < q->nof_rx_antennas; j++) {
       /* extract symbols */
-      n = pmch_get(q, sf_symbols[j], q->symbols[j], lstart);
+      n = pmch_get(q, sf_symbols[j], q->symbols[j], lstart, sf->subcarrier_spacing, sf->tti % 10);
       if (n != cfg->pdsch_cfg.grant.nof_re) {
 
         ERROR("PMCH 1 extract symbols error expecting %d symbols but got %d, lstart %d\n",
@@ -331,7 +326,7 @@ int srslte_pmch_decode(srslte_pmch_t*         q,
 
       /* extract channel estimates */
       for (i = 0; i < q->cell.nof_ports; i++) {
-        n = pmch_get(q, channel->ce[i][j], q->ce[i][j], lstart);
+        n = pmch_get(q, channel->ce[i][j], q->ce[i][j], lstart, sf->subcarrier_spacing, sf->tti % 10);
         if (n != cfg->pdsch_cfg.grant.nof_re) {
           ERROR("PMCH 2 extract chest error expecting %d symbols but got %d\n", cfg->pdsch_cfg.grant.nof_re, n);
           return SRSLTE_ERROR;

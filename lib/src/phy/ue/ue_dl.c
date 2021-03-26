@@ -105,6 +105,7 @@ int srslte_ue_dl_init(srslte_ue_dl_t* q, cf_t* in_buffer[SRSLTE_MAX_PORTS], uint
     ofdm_cfg.in_buffer  = in_buffer[0];
     ofdm_cfg.out_buffer = q->sf_symbols[0];
     ofdm_cfg.sf_type    = SRSLTE_SF_MBSFN;
+    ofdm_cfg.symbol_sz  = srslte_symbol_sz_scs(max_prb, SRSLTE_SCS_1KHZ25); // init for largest possible size
     if (srslte_ofdm_rx_init_cfg(&q->fft_mbsfn, &ofdm_cfg)) {
       ERROR("Error initiating FFT for MBSFN subframes \n");
       goto clean_exit;
@@ -196,7 +197,7 @@ int srslte_ue_dl_set_cell(srslte_ue_dl_t* q, srslte_cell_t cell)
       }
       q->cell = cell;
       for (int i = 0; i < SRSLTE_MI_NOF_REGS; i++) {
-        if (srslte_regs_init_opts(&q->regs[i], q->cell, mi_reg_idx[i % 3], i > 2)) {
+        if (srslte_regs_init_opts(&q->regs[i], q->cell, q->cell.mbms_dedicated ? 0 : mi_reg_idx[i % 3], i > 2)) {
           ERROR("Error resizing REGs\n");
           return SRSLTE_ERROR;
         }
@@ -229,9 +230,11 @@ int srslte_ue_dl_set_cell(srslte_ue_dl_t* q, srslte_cell_t cell)
         ERROR("Error resizing PCFICH object\n");
         return SRSLTE_ERROR;
       }
-      if (srslte_phich_set_cell(&q->phich, &q->regs[phich_init_reg], q->cell)) {
-        ERROR("Error resizing PHICH object\n");
-        return SRSLTE_ERROR;
+      if (!q->cell.mbms_dedicated) {
+        if (srslte_phich_set_cell(&q->phich, &q->regs[phich_init_reg], q->cell)) {
+          ERROR("Error resizing PHICH object\n");
+          return SRSLTE_ERROR;
+        }
       }
 
       if (srslte_pdcch_set_cell(&q->pdcch, &q->regs[pdcch_init_reg], q->cell)) {
@@ -312,7 +315,7 @@ int srslte_ue_dl_set_mbsfn_area_id(srslte_ue_dl_t* q, uint16_t mbsfn_area_id)
   int ret = SRSLTE_ERROR_INVALID_INPUTS;
   if (q != NULL) {
     ret = SRSLTE_ERROR;
-    if (srslte_chest_dl_set_mbsfn_area_id(&q->chest, mbsfn_area_id)) {
+    if (srslte_chest_dl_set_mbsfn_area_id(&q->chest, mbsfn_area_id, q->subcarrier_spacing)) {
       ERROR("Error setting MBSFN area ID \n");
       return ret;
     }
@@ -326,13 +329,30 @@ int srslte_ue_dl_set_mbsfn_area_id(srslte_ue_dl_t* q, uint16_t mbsfn_area_id)
   return ret;
 }
 
+int srslte_ue_dl_set_mbsfn_subcarrier_spacing(srslte_ue_dl_t* q, srslte_scs_t subcarrier_spacing)
+{
+  int ret = SRSLTE_ERROR_INVALID_INPUTS;
+  if (q != NULL) {
+    ret = SRSLTE_ERROR;
+    if (srslte_ofdm_rx_set_prb_scs(&q->fft_mbsfn, SRSLTE_CP_EXT, q->cell.nof_prb, subcarrier_spacing)) {
+      ERROR("Error setting MBSFN subcarrier spacing\n");
+      return ret;
+    }
+    q->subcarrier_spacing = subcarrier_spacing;
+    ret                      = SRSLTE_SUCCESS;
+  }
+  return ret;
+}
+
 static void set_mi_value(srslte_ue_dl_t* q, srslte_dl_sf_cfg_t* sf, srslte_ue_dl_cfg_t* cfg)
 {
   uint32_t sf_idx = sf->tti % 10;
   // Set mi value in pdcch region
   if (q->mi_auto) {
-    INFO("Setting PHICH mi value auto. sf_idx=%d, mi=%d, idx=%d\n", sf_idx, MI_VALUE(sf_idx), MI_IDX(sf_idx));
-    srslte_phich_set_regs(&q->phich, &q->regs[MI_IDX(sf_idx)]);
+    if (!q->cell.mbms_dedicated) { // no PHICH for MBMS dedicated cells 
+      INFO("Setting PHICH mi value auto. sf_idx=%d, mi=%d, idx=%d\n", sf_idx, MI_VALUE(sf_idx), MI_IDX(sf_idx));
+      srslte_phich_set_regs(&q->phich, &q->regs[MI_IDX(sf_idx)]);
+    }
     srslte_pdcch_set_regs(&q->pdcch, &q->regs[MI_IDX(sf_idx)]);
   } else {
     // No subframe 1 or 6 so no need to consider it
@@ -391,7 +411,11 @@ int srslte_ue_dl_decode_fft_estimate(srslte_ue_dl_t* q, srslte_dl_sf_cfg_t* sf, 
         srslte_ofdm_rx_sf(&q->fft[j]);
       }
     }
-    return estimate_pdcch_pcfich(q, sf, cfg);
+    if (sf->sf_type == SRSLTE_SF_MBSFN && sf->subcarrier_spacing != SRSLTE_SCS_15KHZ) {
+      return srslte_chest_dl_estimate_cfg(&q->chest, sf, &cfg->chest_cfg, q->sf_symbols, &q->chest_res);
+    } else {
+      return estimate_pdcch_pcfich(q, sf, cfg);
+    }
   } else {
     return SRSLTE_ERROR_INVALID_INPUTS;
   }
@@ -708,7 +732,7 @@ int srslte_ue_dl_find_dl_dci(srslte_ue_dl_t*     q,
   q->nof_allocated_locations = 0;
 
   int nof_msg = 0;
-  if (rnti == SRSLTE_SIRNTI || rnti == SRSLTE_PRNTI || SRSLTE_RNTI_ISRAR(rnti)) {
+  if (rnti == SRSLTE_SIRNTI || rnti == SRSLTE_SIRNTI_MBMS_DEDICATED || rnti == SRSLTE_PRNTI || SRSLTE_RNTI_ISRAR(rnti)) {
     nof_msg = find_dl_dci_type_siprarnti(q, sf, dl_cfg, rnti, dci_msg);
   } else {
     nof_msg = find_dl_ul_dci_type_crnti(q, sf, dl_cfg, rnti, dci_msg);

@@ -40,6 +40,7 @@ typedef struct SRSLTE_API {
   uint8_t** data;
   bool*     cb_crc;
   bool      tb_crc;
+  double    ber;
 } srslte_softbuffer_rx_t;
 
 typedef struct SRSLTE_API {

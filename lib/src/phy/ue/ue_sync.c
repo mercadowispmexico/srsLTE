@@ -342,6 +342,7 @@ int srslte_ue_sync_set_cell(srslte_ue_sync_t* q, srslte_cell_t cell)
     q->fft_size = srslte_symbol_sz(q->cell.nof_prb);
     q->sf_len   = SRSLTE_SF_LEN(q->fft_size);
 
+
     if (cell.id == 1000) {
 
       /* If the cell is unkown, we search PSS/SSS in 5 ms */
@@ -358,6 +359,11 @@ int srslte_ue_sync_set_cell(srslte_ue_sync_t* q, srslte_cell_t cell)
       // cell configuration for PSS-based sync
       if (q->fft_size < 700 && q->decimate) {
         q->decimate = 1;
+      }
+
+      if (cell.cp == SRSLTE_CP_EXT) {
+        // search for extended CP
+        srslte_sync_set_cp(&q->sfind, SRSLTE_CP_EXT);
       }
 
       if (srslte_sync_resize(&q->sfind, q->frame_len, q->frame_len, q->fft_size)) {
@@ -422,8 +428,10 @@ int srslte_ue_sync_set_cell(srslte_ue_sync_t* q, srslte_cell_t cell)
         srslte_sync_set_threshold(&q->strack, 1.5);
       }
 
-      // When cell is unknown, do CP CFO correction
-      srslte_sync_set_cfo_cp_enable(&q->sfind, true, q->frame_len < 10000 ? 14 : 3);
+      if (cell.cp != SRSLTE_CP_EXT) {
+        // When cell is unknown, do CP CFO correction
+        srslte_sync_set_cfo_cp_enable(&q->sfind, true, q->frame_len < 10000 ? 14 : 3);
+      }
       q->cfo_correct_enable_find = false;
     }
 
@@ -875,9 +883,17 @@ int srslte_ue_sync_run_track_pss_mode(srslte_ue_sync_t* q, cf_t* input_buffer[SR
 {
   int      ret       = SRSLTE_ERROR;
   uint32_t track_idx = 0;
-  /* Every SF idx 0 and 5, find peak around known position q->peak_idx */
-  if ((q->sfind.frame_type == SRSLTE_FDD && (q->sf_idx == 0 || q->sf_idx == 5)) ||
-      (q->sfind.frame_type == SRSLTE_TDD && (q->sf_idx == 1 || q->sf_idx == 6))) {
+  bool find_peak;
+  if (q->cell.mbms_dedicated) {
+    /* search PSS in subframe 0 of every 4th radio frame */
+    find_peak = q->frame_number%4==0 && q->sf_idx == 0;
+  } else {
+    /* Every SF idx 0 and 5, find peak around known position q->peak_idx */
+    find_peak = ((q->sfind.frame_type == SRSLTE_FDD && (q->sf_idx == 0 || q->sf_idx == 5)) ||
+        (q->sfind.frame_type == SRSLTE_TDD && (q->sf_idx == 1 || q->sf_idx == 6))); 
+  }
+
+  if (find_peak) {
     // Process AGC every period
     if (q->do_agc && (q->agc_period == 0 || (q->agc_period && (q->frame_total_cnt % q->agc_period) == 0))) {
       srslte_agc_process(&q->agc, input_buffer[0], q->sf_len);

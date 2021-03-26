@@ -35,8 +35,8 @@ srslte_cell_t cell = {
     SRSLTE_PHICH_NORM,
     SRSLTE_PHICH_R_1, // PHICH length
     SRSLTE_FDD,
-
-};
+    false,           // MBMS dedicated cell
+    0};              // additional non-MBMS subframes
 
 char* output_matlab = NULL;
 

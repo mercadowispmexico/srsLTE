@@ -45,9 +45,13 @@ void print_indexes(cf_t* offset, int len)
 
 void prb_cp_ref(cf_t** input, cf_t** output, int offset, int nof_refs, int nof_intervals, bool advance_output)
 {
+  prb_cp_ref_scs(input, output, offset, nof_refs, nof_intervals, advance_output, SRSLTE_SCS_15KHZ);
+}
+void prb_cp_ref_scs(cf_t** input, cf_t** output, int offset, int nof_refs, int nof_intervals, bool advance_output, srslte_scs_t scs)
+{
   int i;
 
-  int ref_interval = ((SRSLTE_NRE / nof_refs) - 1);
+  int ref_interval = ((SRSLTE_NRE_SCS(scs) / nof_refs) - 1);
   memcpy(*output, *input, offset * sizeof(cf_t));
   print_indexes(*input, offset);
   *input += offset;
@@ -78,10 +82,14 @@ void prb_cp_ref(cf_t** input, cf_t** output, int offset, int nof_refs, int nof_i
 
 void prb_cp(cf_t** input, cf_t** output, int nof_prb)
 {
-  memcpy(*output, *input, sizeof(cf_t) * SRSLTE_NRE * nof_prb);
-  print_indexes(*input, SRSLTE_NRE);
-  *input += nof_prb * SRSLTE_NRE;
-  *output += nof_prb * SRSLTE_NRE;
+  prb_cp_scs(input, output, nof_prb, SRSLTE_SCS_15KHZ);
+}
+void prb_cp_scs(cf_t** input, cf_t** output, int nof_prb, srslte_scs_t scs)
+{
+  memcpy(*output, *input, sizeof(cf_t) * SRSLTE_NRE_SCS(scs) * nof_prb);
+  print_indexes(*input, SRSLTE_NRE_SCS(scs));
+  *input += nof_prb * SRSLTE_NRE_SCS(scs);
+  *output += nof_prb * SRSLTE_NRE_SCS(scs);
 }
 
 void prb_cp_half(cf_t** input, cf_t** output, int nof_prb)
