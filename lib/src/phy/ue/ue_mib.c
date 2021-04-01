@@ -54,7 +54,7 @@ int srslte_ue_mib_init(srslte_ue_mib_t* q, cf_t* in_buffer, uint32_t max_prb)
       goto clean_exit;
     }
 
-    if (srslte_ofdm_rx_init(&q->fft, SRSLTE_CP_NORM, in_buffer, q->sf_symbols, max_prb)) {
+    if (srslte_ofdm_rx_init(&q->fft, SRSLTE_CP_NORM, in_buffer, q->sf_symbols, max_prb )) {
       ERROR("Error initializing FFT\n");
       goto clean_exit;
     }
@@ -101,9 +101,17 @@ int srslte_ue_mib_set_cell(srslte_ue_mib_t* q, srslte_cell_t cell)
       ERROR("Error initiating PBCH\n");
       return SRSLTE_ERROR;
     }
-    if (srslte_ofdm_rx_set_prb(&q->fft, cell.cp, cell.nof_prb)) {
-      ERROR("Error initializing FFT\n");
-      return SRSLTE_ERROR;
+    if (cell.mbsfn_prb != 0 && cell.nof_prb != cell.mbsfn_prb) {
+      if (srslte_ofdm_rx_set_prb_symbol_sz(&q->fft, cell.cp, cell.nof_prb,
+                srslte_symbol_sz(cell.mbsfn_prb))) {
+        ERROR("Error resizing FFT\n");
+        return SRSLTE_ERROR;
+      }
+    } else {
+      if (srslte_ofdm_rx_set_prb(&q->fft, cell.cp, cell.nof_prb)) {
+        ERROR("Error initializing FFT\n");
+        return SRSLTE_ERROR;
+      }
     }
 
     if (cell.nof_ports == 0) {

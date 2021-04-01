@@ -35,7 +35,8 @@ static srslte_cell_t cell = {6,              // nof_prb
                              SRSLTE_PHICH_R_1, // PHICH length
                              SRSLTE_FDD,
                              false,           // MBMS dedicated cell
-                             0};              // additional non-MBMS subframes
+                             0,              // additional non-MBMS subframes
+                             0};            // MBSFN nof_prb
 
 static srslte_refsignal_dmrs_pusch_cfg_t dmrs_pusch_cfg = {};
 static srslte_refsignal_srs_cfg_t        srs_cfg        = {};

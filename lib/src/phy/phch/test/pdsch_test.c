@@ -39,9 +39,8 @@ static srslte_cell_t cell = {
     SRSLTE_PHICH_R_1_6, // PHICH resources
     SRSLTE_FDD,
     false,           // MBMS dedicated cell
-    0
-
-};
+    0,              // additional non-MBMS subframes
+    0};            // MBSFN nof_prb
 
 static srslte_tm_t tm                           = SRSLTE_TM1;
 static uint32_t    cfi                          = 1;

@@ -46,8 +46,8 @@ static int test_pucch_ca(srslte_ack_nack_feedback_mode_t ack_nack_feedback_mode,
       SRSLTE_PHICH_R_1_6, // PHICH resources
       SRSLTE_FDD,
       false,           // MBMS dedicated cell
-      0
-  };
+      0,              // additional non-MBMS subframes
+      0};            // MBSFN nof_prb
 
   cf_t*                             buffer         = NULL;
   srslte_refsignal_dmrs_pusch_cfg_t dmrs_pusch_cfg = {}; // Use default

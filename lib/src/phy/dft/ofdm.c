@@ -59,6 +59,7 @@ static int ofdm_init_mbsfn_(srslte_ofdm_t* q, srslte_ofdm_cfg_t* cfg, srslte_dft
     q->cfg = *cfg;
   }
 
+  DEBUG("Init OFDM at %p to symbol size %d\n", q, q->cfg.symbol_sz);
   uint32_t    symbol_sz = q->cfg.symbol_sz;
   srslte_cp_t cp        = q->cfg.cp;
   srslte_sf_t sf_type   = q->cfg.sf_type;
@@ -335,10 +336,21 @@ int srslte_ofdm_rx_set_prb(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb)
 
 int srslte_ofdm_rx_set_prb_scs(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, srslte_scs_t subcarrier_spacing)
 {
+  return srslte_ofdm_rx_set_prb_scs_symbol_sz(q, cp, nof_prb, subcarrier_spacing, 0);
+}
+
+int srslte_ofdm_rx_set_prb_symbol_sz(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, uint32_t symbol_sz)
+{
+  return srslte_ofdm_rx_set_prb_scs_symbol_sz(q, cp, nof_prb, SRSLTE_SCS_15KHZ, symbol_sz);
+}
+
+int srslte_ofdm_rx_set_prb_scs_symbol_sz(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, srslte_scs_t subcarrier_spacing, uint32_t symbol_sz)
+{
   srslte_ofdm_cfg_t cfg = {};
   cfg.cp                = cp;
   cfg.nof_prb           = nof_prb;
   cfg.subcarrier_spacing = subcarrier_spacing;
+  cfg.symbol_sz           = symbol_sz;
   return ofdm_init_mbsfn_(q, &cfg, SRSLTE_DFT_FORWARD);
 }
 

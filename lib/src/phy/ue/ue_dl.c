@@ -189,7 +189,7 @@ int srslte_ue_dl_set_cell(srslte_ue_dl_t* q, srslte_cell_t cell)
   if (q != NULL && srslte_cell_isvalid(&cell)) {
     q->pending_ul_dci_count = 0;
 
-    if (q->cell.id != cell.id || q->cell.nof_prb == 0) {
+    if (q->cell.id != cell.id || q->cell.nof_prb == 0 || q->cell.mbsfn_prb != cell.mbsfn_prb) {
       if (q->cell.nof_prb != 0) {
         for (int i = 0; i < SRSLTE_MI_NOF_REGS; i++) {
           srslte_regs_free(&q->regs[i]);
@@ -203,9 +203,18 @@ int srslte_ue_dl_set_cell(srslte_ue_dl_t* q, srslte_cell_t cell)
         }
       }
       for (int port = 0; port < q->nof_rx_antennas; port++) {
-        if (srslte_ofdm_rx_set_prb(&q->fft[port], q->cell.cp, q->cell.nof_prb)) {
-          ERROR("Error resizing FFT\n");
-          return SRSLTE_ERROR;
+        if (q->cell.mbsfn_prb != 0 && q->cell.mbsfn_prb != q->cell.nof_prb) {
+          if (srslte_ofdm_rx_set_prb_symbol_sz(&q->fft[port], q->cell.cp, q->cell.nof_prb, 
+                srslte_symbol_sz(q->cell.mbsfn_prb))) {
+            ERROR("Error resizing FFT\n");
+            return SRSLTE_ERROR;
+          }
+
+        } else {
+          if (srslte_ofdm_rx_set_prb(&q->fft[port], q->cell.cp, q->cell.nof_prb)) {
+            ERROR("Error resizing FFT\n");
+            return SRSLTE_ERROR;
+          }
         }
       }
 
@@ -217,7 +226,7 @@ int srslte_ue_dl_set_cell(srslte_ue_dl_t* q, srslte_cell_t cell)
         phich_init_reg = 2; // mi=2
       }
 
-      if (srslte_ofdm_rx_set_prb(&q->fft_mbsfn, SRSLTE_CP_EXT, q->cell.nof_prb)) {
+      if (srslte_ofdm_rx_set_prb(&q->fft_mbsfn, SRSLTE_CP_EXT, q->cell.mbsfn_prb)) {
         ERROR("Error resizing MBSFN FFT\n");
         return SRSLTE_ERROR;
       }
@@ -334,7 +343,7 @@ int srslte_ue_dl_set_mbsfn_subcarrier_spacing(srslte_ue_dl_t* q, srslte_scs_t su
   int ret = SRSLTE_ERROR_INVALID_INPUTS;
   if (q != NULL) {
     ret = SRSLTE_ERROR;
-    if (srslte_ofdm_rx_set_prb_scs(&q->fft_mbsfn, SRSLTE_CP_EXT, q->cell.nof_prb, subcarrier_spacing)) {
+    if (srslte_ofdm_rx_set_prb_scs(&q->fft_mbsfn, SRSLTE_CP_EXT, q->cell.mbsfn_prb, subcarrier_spacing)) {
       ERROR("Error setting MBSFN subcarrier spacing\n");
       return ret;
     }

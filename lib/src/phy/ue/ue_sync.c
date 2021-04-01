@@ -339,7 +339,12 @@ int srslte_ue_sync_set_cell(srslte_ue_sync_t* q, srslte_cell_t cell)
     }
 
     q->cell     = cell;
-    q->fft_size = srslte_symbol_sz(q->cell.nof_prb);
+    if (q->cell.mbsfn_prb != 0 && q->cell.mbsfn_prb)
+    {
+      q->fft_size = srslte_symbol_sz(q->cell.mbsfn_prb);
+    } else {
+      q->fft_size = srslte_symbol_sz(q->cell.nof_prb);
+    }
     q->sf_len   = SRSLTE_SF_LEN(q->fft_size);
 
 

@@ -100,6 +100,8 @@ SRSLTE_API int srslte_ofdm_tx_set_prb(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t
 SRSLTE_API int srslte_ofdm_rx_set_prb(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb);
 
 SRSLTE_API int srslte_ofdm_rx_set_prb_scs(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, srslte_scs_t scs);
+SRSLTE_API int srslte_ofdm_rx_set_prb_symbol_sz(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, uint32_t symbol_sz);
+SRSLTE_API int srslte_ofdm_rx_set_prb_scs_symbol_sz(srslte_ofdm_t* q, srslte_cp_t cp, uint32_t nof_prb, srslte_scs_t scs, uint32_t symbol_sz);
 
 SRSLTE_API void srslte_ofdm_rx_free(srslte_ofdm_t* q);
 

@@ -383,7 +383,7 @@ void srslte_configure_pmch(srslte_pmch_cfg_t* pmch_cfg, srslte_cell_t* cell, srs
 {
   pmch_cfg->area_id                       = 1;
   pmch_cfg->pdsch_cfg.grant.nof_layers    = 1;
-  pmch_cfg->pdsch_cfg.grant.nof_prb       = cell->nof_prb;
+  pmch_cfg->pdsch_cfg.grant.nof_prb       = cell->mbsfn_prb;
   pmch_cfg->pdsch_cfg.grant.tb[0].mcs_idx = mbsfn_cfg->mbsfn_mcs;
   pmch_cfg->pdsch_cfg.grant.tb[0].enabled = mbsfn_cfg->enable;
   pmch_cfg->pdsch_cfg.grant.tb[0].rv      = SRSLTE_PMCH_RV;

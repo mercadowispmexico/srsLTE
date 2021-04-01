@@ -1599,6 +1599,81 @@ std::string mbsfn_area_info_r9_s::subcarrier_spacing_mbms_r14_opts::to_number_st
   return convert_enum_idx(options, 2, value, "mbsfn_area_info_r9_s::subcarrier_spacing_mbms_r14_e_");
 }
 
+std::string mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_repeat_period_r16_opts::to_string() const
+{
+  static const char* options[] = {"rf1", "rf2", "rf4", "rf8", "rf16",
+    "rf32", "rf64", "rf128", "rf256",
+    "spare7", "spare6", "spare5", "spare4", "spare3", "spare2", "spare1"};
+  return convert_enum_idx(options, 16, value, "mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_repeat_period_r16_e_");
+}
+uint16_t mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_repeat_period_r16_opts::to_number() const
+{
+  static const uint16_t options[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
+  return map_enum_number(options, 9, value, "mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_repeat_period_r16_e_");
+}
+
+std::string mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_mod_period_r16_opts::to_string() const
+{
+  static const char* options[] = {"rf1", "rf2", "rf4", "rf8", "rf16",
+    "rf32", "rf64", "rf128", "rf256", "rf512", "rf1024",
+    "spare5", "spare4", "spare3", "spare2", "spare1"};
+  return convert_enum_idx(options, 16, value, "mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_mod_period_r16_e_");
+}
+uint16_t mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_mod_period_r16_opts::to_number() const
+{
+  static const uint16_t options[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
+  return map_enum_number(options, 11, value, "mbsfn_area_info_r16_s::mcch_cfg_r16_s_::mcch_mod_period_r16_e_");
+}
+
+std::string mbsfn_area_info_r16_s::mcch_cfg_r16_s_::sig_mcs_r16_opts::to_string() const
+{
+  static const char* options[] = {"n2", "n7", "n13", "n19"};
+  return convert_enum_idx(options, 4, value, "mbsfn_area_info_r16_s::mcch_cfg_r16_s_::sig_mcs_r16_e_");
+}
+uint8_t mbsfn_area_info_r16_s::mcch_cfg_r16_s_::sig_mcs_r16_opts::to_number() const
+{
+  static const uint8_t options[] = {2, 7, 13, 19};
+  return map_enum_number(options, 4, value, "mbsfn_area_info_r16_s::mcch_cfg_r16_s_::sig_mcs_r16_e_");
+}
+
+std::string mbsfn_area_info_r16_s::subcarrier_spacing_mbms_r16_opts::to_string() const
+{
+  static const char* options[] = {"khz7dot5", "khz2dot5", "khz1dot25", "khz0dot37", "spare4", "spare3", "spare2", "spare1"};
+  return convert_enum_idx(options, 8, value, "mbsfn_area_info_r16_s::subcarrier_spacing_mbms_r16_e_");
+}
+float mbsfn_area_info_r16_s::subcarrier_spacing_mbms_r16_opts::to_number() const
+{
+  static const float options[] = {7.5, 2.5, 1.25, 0.37};
+  return map_enum_number(options, 4, value, "mbsfn_area_info_r16_s::subcarrier_spacing_mbms_r16_e_");
+}
+std::string mbsfn_area_info_r16_s::subcarrier_spacing_mbms_r16_opts::to_number_string() const
+{
+  static const char* options[] = {"7.5", "2.5", "1.25", "0.25"};
+  return convert_enum_idx(options, 2, value, "mbsfn_area_info_r16_s::subcarrier_spacing_mbms_r16_e_");
+}
+
+std::string mbsfn_area_info_r16_s::time_separation_r16_opts::to_string() const
+{
+  static const char* options[] = {"s12", "s14"};
+  return convert_enum_idx(options, 2, value, "mbsfn_area_info_r16_s::time_separation_r16_opts");
+}
+uint8_t mbsfn_area_info_r16_s::time_separation_r16_opts::to_number() const
+{
+  static const uint8_t options[] = {12, 14};
+  return map_enum_number(options, 2, value, "mbsfn_area_info_r16_s::time_separation_r16_opts");
+}
+
+std::string mbsfn_area_info_r16_s::pmch_bandwidth_v16xy_opts::to_string() const
+{
+  static const char* options[] = {"n30", "n35", "n40", "spare1"};
+  return convert_enum_idx(options, 4, value, "mbsfn_area_info_r16_s::pmch_bandwidth_v16xy_opts");
+}
+uint8_t mbsfn_area_info_r16_s::pmch_bandwidth_v16xy_opts::to_number() const
+{
+  static const uint8_t options[] = {30, 35, 40};
+  return map_enum_number(options, 3, value, "mbsfn_area_info_r16_s::pmch_bandwidth_v16xy_opts");
+}
+
 std::string mbsfn_sf_cfg_s::radioframe_alloc_period_opts::to_string() const
 {
   static const char* options[] = {"n1", "n2", "n4", "n8", "n16", "n32"};
