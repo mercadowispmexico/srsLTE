@@ -453,17 +453,36 @@ bool decode_tb_cb(srslte_sch_t*           q,
 
       unsigned bit_errors = 0;
 #ifdef CALCULATE_BER
-      uint8_t decoded[rlen];
-      srslte_bit_unpack_vector(&data[cb_idx * rlen / 8], decoded, rlen);
-
       int enc_len = rlen * 3 + 12;
       uint8_t reencoded[enc_len];
-      srslte_tcod_encode(&q->encoder, decoded, reencoded, rlen) ;
+      uint8_t sb[enc_len];
 
-      for (int k = 0; k < enc_len; k++)
+      srslte_tcod_encode_lut(&q->encoder,
+          &q->crc_tb,
+          NULL,
+          &data[cb_idx * rlen / 8],
+          q->parity_bits,
+          cb_len_idx,
+          cb_idx == (cb_segm->C - 1));
+
+      if (srslte_rm_turbo_tx_lut(sb,
+            &data[cb_idx * rlen / 8],
+            q->parity_bits,
+            reencoded,
+            cb_len_idx,
+            n_e,
+            0,
+            rv)) {
+        ERROR("Error in rate matching\n");
+      }
+
+      uint8_t unpacked[enc_len];
+      srslte_bit_unpack_vector(reencoded, unpacked, enc_len);
+
+      for (int k = 0; k < rlen*3; k++)
       {
-        if( ( softbuffer->buffer_f[cb_idx][k] <= 0 && reencoded[k] ) ||
-            ( softbuffer->buffer_f[cb_idx][k] > 0 && !reencoded[k] ) ) {
+        if( ( e_bits_s[rp+k] <= 0 && unpacked[k] ) ||
+            ( e_bits_s[rp+k] > 0 && !unpacked[k] ) ) {
           bit_errors++;
         }
       }
