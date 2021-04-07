@@ -419,7 +419,7 @@ inline uint32_t srslte_refsignal_mbsfn_offset(uint32_t l, uint32_t s, uint32_t s
       break;
     case SRSLTE_SCS_7KHZ5:
       if (s == 1 && l == 0) {
-        ret = 3;
+        ret = 2;
       }
       break;
     case SRSLTE_SCS_1KHZ25:
