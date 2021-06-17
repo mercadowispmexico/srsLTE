@@ -453,7 +453,7 @@ bool decode_tb_cb(srslte_sch_t*           q,
 
       unsigned bit_errors = 0;
 #ifdef CALCULATE_BER
-      int enc_len = rlen * 3 + 12;
+      int enc_len = rlen * 6;
       uint8_t reencoded[enc_len];
       uint8_t sb[enc_len];
 
