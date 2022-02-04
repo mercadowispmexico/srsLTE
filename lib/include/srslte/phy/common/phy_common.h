@@ -265,6 +265,7 @@ typedef struct SRSLTE_API {
   bool                  mbms_dedicated;
   uint8_t               additional_non_mbms_frames;
   uint8_t               mbsfn_prb;
+  uint32_t              cfi;
   } srslte_cell_t;
 
 // Common downlink properties that may change every subframe

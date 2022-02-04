@@ -37,7 +37,8 @@ static srslte_cell_t cell = {50,             // nof_prb
                              SRSLTE_FDD,
                              false,           // MBMS dedicated cell
                              0,              // additional non-MBMS subframes
-                             0};            // MBSFN nof_prb
+                             0,            // MBSFN nof_prb
+                             0};           // CFI in MIB
 
 typedef struct {
   srslte_dmrs_pdsch_mapping_type_t mapping_type;

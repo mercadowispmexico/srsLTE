@@ -47,7 +47,8 @@ static int test_pucch_ca(srslte_ack_nack_feedback_mode_t ack_nack_feedback_mode,
       SRSLTE_FDD,
       false,           // MBMS dedicated cell
       0,              // additional non-MBMS subframes
-      0};            // MBSFN nof_prb
+      0,            // MBSFN nof_prb
+      0};           // CFI in MIB
 
   cf_t*                             buffer         = NULL;
   srslte_refsignal_dmrs_pusch_cfg_t dmrs_pusch_cfg = {}; // Use default

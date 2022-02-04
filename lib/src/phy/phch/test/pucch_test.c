@@ -38,7 +38,8 @@ srslte_cell_t cell = {
     SRSLTE_FDD,
     false,           // MBMS dedicated cell
     0,              // additional non-MBMS subframes
-    0};            // MBSFN nof_prb
+    0,            // MBSFN nof_prb
+    0};           // CFI in MIB
 
 uint32_t subframe      = 0;
 bool     test_cqi_only = false;
