@@ -83,6 +83,7 @@ static void* srslte_pdsch_decode_thread(void* arg);
 static inline bool pdsch_cp_skip_symbol(const srslte_cell_t*        cell,
                                         const srslte_pdsch_grant_t* grant,
                                         uint32_t                    sf_idx,
+                                        uint32_t                    sfn,
                                         uint32_t                    s,
                                         uint32_t                    l,
                                         uint32_t                    n)
@@ -106,6 +107,9 @@ static inline bool pdsch_cp_skip_symbol(const srslte_cell_t*        cell,
     }
     // PBCH same in FDD and TDD
     if (s == 1 && sf_idx == 0 && l < 4) {
+      return true;
+    }
+    if (cell->cfi != 0 && sf_idx == 0 && ((cell->nof_prb >= 25 && sfn % 4 == 0) || (cell->nof_prb < 25 && sfn % 8 == 4))){
       return true;
     }
   }
@@ -139,6 +143,7 @@ static int srslte_pdsch_cp(const srslte_pdsch_t*       q,
                            const srslte_pdsch_grant_t* grant,
                            uint32_t                    lstart_grant,
                            uint32_t                    sf_idx,
+                           uint32_t                    sfn,
                            bool                        put)
 {
   cf_t*    in_ptr   = input;
@@ -163,7 +168,7 @@ static int srslte_pdsch_cp(const srslte_pdsch_t*       q,
 
         // If this PRB is assigned
         if (grant->prb_idx[s][n]) {
-          bool skip = pdsch_cp_skip_symbol(&q->cell, grant, sf_idx, s, l, n);
+          bool skip = pdsch_cp_skip_symbol(&q->cell, grant, sf_idx, sfn, s, l, n);
 
           // Get grid pointer
           if (put) {
@@ -232,9 +237,10 @@ int srslte_pdsch_put(srslte_pdsch_t*       q,
                      cf_t*                 sf_symbols,
                      srslte_pdsch_grant_t* grant,
                      uint32_t              lstart,
-                     uint32_t              subframe)
+                     uint32_t              subframe,
+                     uint32_t              sfn)
 {
-  return srslte_pdsch_cp(q, symbols, sf_symbols, grant, lstart, subframe, true);
+  return srslte_pdsch_cp(q, symbols, sf_symbols, grant, lstart, subframe, sfn, true);
 }
 
 /**
@@ -249,9 +255,10 @@ int srslte_pdsch_get(srslte_pdsch_t*       q,
                      cf_t*                 symbols,
                      srslte_pdsch_grant_t* grant,
                      uint32_t              lstart,
-                     uint32_t              subframe)
+                     uint32_t              subframe,
+                     uint32_t              sfn)
 {
-  return srslte_pdsch_cp(q, sf_symbols, symbols, grant, lstart, subframe, false);
+  return srslte_pdsch_cp(q, sf_symbols, symbols, grant, lstart, subframe, sfn, false);
 }
 
 /** Initializes the PDSCH transmitter and receiver */
@@ -951,14 +958,14 @@ int srslte_pdsch_decode(srslte_pdsch_t*        q,
     // Extract Symbols and Channel Estimates
     uint32_t lstart = SRSLTE_NOF_CTRL_SYMBOLS(q->cell, sf->cfi);
     for (int j = 0; j < q->nof_rx_antennas; j++) {
-      int n = srslte_pdsch_get(q, sf_symbols[j], q->symbols[j], &cfg->grant, lstart, sf->tti % 10);
+      int n = srslte_pdsch_get(q, sf_symbols[j], q->symbols[j], &cfg->grant, lstart, sf->tti % 10, sf->tti / 10);
       if (n != cfg->grant.nof_re) {
         ERROR("Error expecting %d symbols but got %d\n", cfg->grant.nof_re, n);
         return SRSLTE_ERROR;
       }
 
       for (i = 0; i < q->cell.nof_ports; i++) {
-        n = srslte_pdsch_get(q, channel->ce[i][j], q->ce[i][j], &cfg->grant, lstart, sf->tti % 10);
+        n = srslte_pdsch_get(q, channel->ce[i][j], q->ce[i][j], &cfg->grant, lstart, sf->tti % 10, sf->tti / 10);
         if (n != cfg->grant.nof_re) {
           ERROR("Error expecting %d symbols but got %d\n", cfg->grant.nof_re, n);
           return SRSLTE_ERROR;
@@ -1243,7 +1250,7 @@ int srslte_pdsch_encode(srslte_pdsch_t*     q,
     /* mapping to resource elements */
     uint32_t lstart = SRSLTE_NOF_CTRL_SYMBOLS(q->cell, sf->cfi);
     for (i = 0; i < q->cell.nof_ports; i++) {
-      srslte_pdsch_put(q, q->symbols[i], sf_symbols[i], &cfg->grant, lstart, sf->tti % 10);
+      srslte_pdsch_put(q, q->symbols[i], sf_symbols[i], &cfg->grant, lstart, sf->tti % 10, sf->tti / 10);
     }
 
     if (cfg->meas_time_en) {

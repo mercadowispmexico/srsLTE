@@ -48,6 +48,7 @@ static uint32_t ra_re_x_prb(const srslte_cell_t* cell, srslte_dl_sf_cfg_t* sf, u
 {
 
   uint32_t subframe         = sf->tti % 10;
+  uint32_t sfn              = sf->tti / 10;
   uint32_t nof_ctrl_symbols = SRSLTE_NOF_CTRL_SYMBOLS((*cell), sf->cfi);
 
   uint32_t    re;
@@ -82,12 +83,22 @@ static uint32_t ra_re_x_prb(const srslte_cell_t* cell, srslte_dl_sf_cfg_t* sf, u
       if (subframe == 0) {
         if (slot == 0) {
           re = (nof_symbols - nof_ctrl_symbols - 2) * SRSLTE_NRE;
+          if (((cell->nof_prb >= 25 && sfn % 4 == 0) || (cell->nof_prb > 25 && sfn % 8 == 4)) && cell->cfi != 0){
+            re -= (SRSLTE_CP_ISEXT(cp_) ? 1 : 2) * SRSLTE_NRE;
+            skip_refs = false;
+          }
         } else {
           if (SRSLTE_CP_ISEXT(cp_)) {
             re        = (nof_symbols - 4) * SRSLTE_NRE;
+            if (((cell->nof_prb >= 25 && sfn % 4 == 0) || (cell->nof_prb > 25 && sfn % 8 == 4)) && cell->cfi != 0){
+              re -= 2 * SRSLTE_NRE;
+            }
             skip_refs = false;
           } else {
             re = (nof_symbols - 4) * SRSLTE_NRE + 2 * cell->nof_ports;
+            if (((cell->nof_prb >= 25 && sfn % 4 == 0) || (cell->nof_prb > 25 && sfn % 8 == 4)) && cell->cfi != 0){
+              re -= 3 * SRSLTE_NRE;
+            }
           }
         }
       } else if (subframe == 5) {
@@ -98,8 +109,18 @@ static uint32_t ra_re_x_prb(const srslte_cell_t* cell, srslte_dl_sf_cfg_t* sf, u
       if ((cell->nof_prb % 2) && (prb_idx == cell->nof_prb / 2 - 3 || prb_idx == cell->nof_prb / 2 + 3)) {
         if (slot == 0) {
           re += 2 * SRSLTE_NRE / 2;
+          if (((cell->nof_prb >= 25 && sfn % 4 == 0) || (cell->nof_prb > 25 && sfn % 8 == 4)) && cell->cfi != 0 && subframe == 0){
+            re += (SRSLTE_CP_ISEXT(cp_) ? 1 : 2 ) * SRSLTE_NRE / 2;
+            re -= cell->nof_ports > 2 ? 2 : cell->nof_ports;
+          }
         } else if (subframe == 0) {
           re += 4 * SRSLTE_NRE / 2 - cell->nof_ports;
+          if (((cell->nof_prb >= 25 && sfn % 4 == 0) || (cell->nof_prb > 25 && sfn % 8 == 4)) && cell->cfi != 0){
+            re += (SRSLTE_CP_ISEXT(cp_) ? 2 : 3 ) * SRSLTE_NRE / 2;
+            if (!SRSLTE_CP_ISEXT(cp_)) {
+              re -= cell->nof_ports > 2 ? 2 : cell->nof_ports;
+            }
+          }
           if (SRSLTE_CP_ISEXT(cp_)) {
             re -= cell->nof_ports > 2 ? 2 : cell->nof_ports;
           }

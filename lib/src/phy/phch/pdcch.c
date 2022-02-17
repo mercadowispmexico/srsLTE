@@ -309,7 +309,7 @@ uint32_t srslte_pdcch_common_locations_ncce(uint32_t nof_cce, srslte_dci_locatio
   uint32_t i, l, L, k;
 
   k = 0;
-  for (l = 2; l <= 3; l++) {
+  for (l = 2; l <= 4; l++) {
     L = (1 << l);
     for (i = 0; i < SRSLTE_MIN(nof_cce, 16) / (L); i++) {
       // Simplified expression, derived from:
