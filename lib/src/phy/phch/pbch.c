@@ -38,6 +38,8 @@
 
 #define PBCH_RE_CP_NORM 240
 #define PBCH_RE_CP_EXT 216
+#define PBCH_RE_CP_NORM_REP 312
+#define PBCH_RE_CP_EXT_REP 168
 
 const uint8_t srslte_crc_mask[4][16] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                                         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
@@ -51,7 +53,7 @@ bool srslte_pbch_exists(int nframe, int nslot)
 
 cf_t* offset_original;
 
-int srslte_pbch_cp(cf_t* input, cf_t* output, srslte_cell_t cell, bool put)
+int srslte_pbch_cp(cf_t* input, cf_t* output, srslte_cell_t cell, bool put, bool repeated)
 {
   int   i;
   cf_t* ptr;
@@ -66,18 +68,45 @@ int srslte_pbch_cp(cf_t* input, cf_t* output, srslte_cell_t cell, bool put)
     input += cell.nof_prb * SRSLTE_NRE / 2 - 36;
   }
 
-  /* symbol 0 & 1 */
-  for (i = 0; i < 2; i++) {
-    prb_cp_ref(&input, &output, cell.id % 3, 4, 4 * 6, put);
-    if (put) {
-      output += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
-    } else {
-      input += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
-    }
-  }
-  /* symbols 2 & 3 */
-  if (SRSLTE_CP_ISNORM(cell.cp)) {
+  if (!repeated) { // Pre-release 16
+    /* symbol 0 & 1 */
     for (i = 0; i < 2; i++) {
+      prb_cp_ref(&input, &output, cell.id % 3, 4, 4 * 6, put);
+      if (put) {
+        output += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+      } else {
+        input += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+      }
+    }
+    /* symbols 2 & 3 */
+    if (SRSLTE_CP_ISNORM(cell.cp)) {
+      for (i = 0; i < 2; i++) {
+        prb_cp(&input, &output, 6);
+        if (put) {
+          output += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+        } else {
+          input += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+        }
+      }
+    } else {
+      prb_cp(&input, &output, 6);
+      if (put) {
+        output += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+      } else {
+        input += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+      }
+      prb_cp_ref(&input, &output, cell.id % 3, 4, 4 * 6, put);
+    }
+  } else { // Release 16
+
+    if (put) {
+      output += cell.nof_prb * SRSLTE_NRE * 3; // First PBCH symbol is the fourth (3) in slot0
+    } else {
+      input += cell.nof_prb * SRSLTE_NRE * 3;
+    }
+
+    /* symbol 3 slot0 */
+    if (SRSLTE_CP_ISNORM(cell.cp)) {
       prb_cp(&input, &output, 6);
       if (put) {
         output += cell.nof_prb * SRSLTE_NRE - 2 * 36;
@@ -85,14 +114,58 @@ int srslte_pbch_cp(cf_t* input, cf_t* output, srslte_cell_t cell, bool put)
         input += cell.nof_prb * SRSLTE_NRE - 2 * 36;
       }
     }
-  } else {
-    prb_cp(&input, &output, 6);
-    if (put) {
-      output += cell.nof_prb * SRSLTE_NRE - 2 * 36;
-    } else {
-      input += cell.nof_prb * SRSLTE_NRE - 2 * 36;
-    }
+
     prb_cp_ref(&input, &output, cell.id % 3, 4, 4 * 6, put);
+    if (put) {
+      output += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+    } else {
+      input += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+    }
+    
+
+    /* Move to next group of repeated symbol in slot1 */
+    if (put) {
+      output += cell.nof_prb * SRSLTE_NRE * 6; // First PBCH symbol is the fifth (4) in slot0
+    } else {
+      input += cell.nof_prb * SRSLTE_NRE * 6;
+    }
+
+    /* symbol 4 NORM CP */
+    if (SRSLTE_CP_ISNORM(cell.cp)) {
+      prb_cp_ref(&input, &output, cell.id % 3, 4, 4 * 6, put);
+      if (put) {
+        output += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+      } else {
+        input += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+      }
+    }
+    
+    /* symbol 5 & 6 NORM CP, or symbol 4 & 5 EXT CP */
+    if (SRSLTE_CP_ISNORM(cell.cp)) {
+      for (i = 0; i < 2; i++) {
+        prb_cp(&input, &output, 6);
+        if (put) {
+          output += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+        } else {
+          input += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+        }
+      }
+    } else {
+      prb_cp(&input, &output, 6);
+      if (put) {
+        output += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+      } else {
+        input += cell.nof_prb * SRSLTE_NRE - 2 * 36;
+      }
+
+      prb_cp_ref(&input, &output, cell.id % 3, 4, 4 * 6, put);
+      if (put) {
+        output += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+      } else {
+        input += cell.nof_prb * SRSLTE_NRE - 2 * 36 + (cell.id % 3 == 2 ? 1 : 0);
+      }
+    }
+
   }
   if (put) {
     return input - ptr;
@@ -114,7 +187,7 @@ int srslte_pbch_cp(cf_t* input, cf_t* output, srslte_cell_t cell, bool put)
  */
 int srslte_pbch_put(cf_t* pbch, cf_t* slot1_data, srslte_cell_t cell)
 {
-  return srslte_pbch_cp(pbch, slot1_data, cell, true);
+  return srslte_pbch_cp(pbch, slot1_data, cell, true, false);
 }
 
 /**
@@ -130,7 +203,39 @@ int srslte_pbch_put(cf_t* pbch, cf_t* slot1_data, srslte_cell_t cell)
  */
 int srslte_pbch_get(cf_t* slot1_data, cf_t* pbch, srslte_cell_t cell)
 {
-  return srslte_pbch_cp(slot1_data, pbch, cell, false);
+  return srslte_pbch_cp(slot1_data, pbch, cell, false, false);
+}
+
+/**
+ * Puts repeated PBCH symbols in slot number 0 and 1 
+ *
+ * Returns the number of symbols written to slot_data
+ *
+ * 36.211 16.3 section 6.6.4
+ *
+ * @param[in] pbch PBCH complex symbols to place in slot1_data
+ * @param[out] slot1_data Complex symbol buffer for slot1
+ * @param[in] cell Cell configuration
+ */
+int srslte_pbch_put_rep(cf_t* pbch, cf_t* slot_data, srslte_cell_t cell)
+{
+  return srslte_pbch_cp(pbch, slot_data, cell, true, true);
+}
+
+/**
+ * Extracts repeated PBCH symbols from slot number 0 and 1
+ *
+ * Returns the number of symbols written to pbch
+ *
+ * 36.211 16.3 section 6.6.4
+ *
+ * @param[in] slot1_data Complex symbols for slot1
+ * @param[out] pbch Extracted complex PBCH symbols
+ * @param[in] cell Cell configuration
+ */
+int srslte_pbch_get_rep(cf_t* slot_data, cf_t* pbch, srslte_cell_t cell)
+{
+  return srslte_pbch_cp(slot_data, pbch, cell, false, true);
 }
 
 /** Initializes the PBCH transmitter and receiver.
@@ -163,21 +268,21 @@ int srslte_pbch_init(srslte_pbch_t* q)
 
     q->nof_symbols = PBCH_RE_CP_NORM;
 
-    q->d = srslte_vec_cf_malloc(q->nof_symbols);
+    q->d = srslte_vec_cf_malloc(q->nof_symbols + PBCH_RE_CP_NORM_REP);
     if (!q->d) {
       goto clean;
     }
     int i;
     for (i = 0; i < SRSLTE_MAX_PORTS; i++) {
-      q->ce[i] = srslte_vec_cf_malloc(q->nof_symbols);
+      q->ce[i] = srslte_vec_cf_malloc(q->nof_symbols + PBCH_RE_CP_NORM_REP);
       if (!q->ce[i]) {
         goto clean;
       }
-      q->x[i] = srslte_vec_cf_malloc(q->nof_symbols);
+      q->x[i] = srslte_vec_cf_malloc(q->nof_symbols + PBCH_RE_CP_NORM_REP);
       if (!q->x[i]) {
         goto clean;
       }
-      q->symbols[i] = srslte_vec_cf_malloc(q->nof_symbols);
+      q->symbols[i] = srslte_vec_cf_malloc(q->nof_symbols + PBCH_RE_CP_NORM_REP);
       if (!q->symbols[i]) {
         goto clean;
       }
@@ -192,6 +297,10 @@ int srslte_pbch_init(srslte_pbch_t* q)
     }
     q->rm_b = srslte_vec_u8_malloc(q->nof_symbols * 4 * 2);
     if (!q->rm_b) {
+      goto clean;
+    }
+    q->theta = srslte_vec_cf_malloc(6 * SRSLTE_NRE * SRSLTE_MAX_NOF_REP_PBCH_SYMBOLS);
+    if (!q->theta) {
       goto clean;
     }
 
@@ -236,6 +345,49 @@ void srslte_pbch_free(srslte_pbch_t* q)
   bzero(q, sizeof(srslte_pbch_t));
 }
 
+int srslte_rep_pbch_symbols_idx(uint32_t l, srslte_cp_t cp)
+{
+  int ret = 0;
+  switch (cp) {
+    case SRSLTE_CP_EXT:
+      ret = l + 3;
+      break;
+    case SRSLTE_CP_NORM:
+      if (l < 2) {
+        ret = l + 3;
+      } else {
+        ret = l + 2;
+      } 
+  }
+  return ret;
+}
+
+int srslte_set_phase_rep_pbch(cf_t* theta, srslte_cp_t cp, uint32_t cell_id, bool inv)
+{
+  int vo = cell_id % 3, i = 0; uint32_t nsp, lp;
+  srslte_sequence_t seq;
+  bzero(&seq, sizeof(srslte_sequence_t));
+
+  /* Initialitation of c sequence, as especified in TS 36.211 v16.3.0 section 6.6.4.1*/
+  for (uint32_t l = 0; l < SRSLTE_NOF_REP_PBCH_SYMBOLS(cp); l++){
+    nsp = (l > (SRSLTE_CP_ISNORM(cp) ? 1 : 0)) ? 1 : 0;
+
+    lp = srslte_rep_pbch_symbols_idx(l, cp);
+    if(srslte_sequence_LTE_pr(&seq, 2 * 6 * SRSLTE_NRE + 1, (1<<13) * ((cell_id + 1) * (SRSLTE_CP_NSYMB(cp) * nsp + lp + 1)) + (1<<4) * cell_id + (SRSLTE_CP_NSYMB(cp) * nsp + lp))){
+      return SRSLTE_ERROR;
+    }
+    for (uint32_t kp = 0; kp < 6 * SRSLTE_NRE; kp++){
+      if((l == ((SRSLTE_CP_ISNORM(cp)) ? 1 : 0)) || l == 2){
+        if((vo == (kp % 3))){ // We don't need to compute the CS-RS phases.
+          continue;
+        }
+      }
+      theta[i++] = cexp(pow(-1, inv)*(M_PI * I * seq.c[2*kp])/2)*cexp(pow(-1, inv)*M_PI * I * seq.c[2*kp + 1]);
+    }
+  }
+  return SRSLTE_SUCCESS;
+}
+
 int srslte_pbch_set_cell(srslte_pbch_t* q, srslte_cell_t cell)
 {
   int ret = SRSLTE_ERROR_INVALID_INPUTS;
@@ -253,8 +405,12 @@ int srslte_pbch_set_cell(srslte_pbch_t* q, srslte_cell_t cell)
       if (srslte_sequence_pbch(&q->seq, q->cell.cp, q->cell.id, q->cell.mbms_dedicated)) {
         return SRSLTE_ERROR;
       }
+      if (srslte_set_phase_rep_pbch(q->theta, q->cell.cp, q->cell.id, true)) {
+        return SRSLTE_ERROR;
+      }
     }
-    q->nof_symbols = (SRSLTE_CP_ISNORM(q->cell.cp)) ? PBCH_RE_CP_NORM : PBCH_RE_CP_EXT;
+    q->nof_symbols     = (SRSLTE_CP_ISNORM(q->cell.cp)) ? PBCH_RE_CP_NORM : PBCH_RE_CP_EXT;
+    q->nof_rep_symbols = (SRSLTE_CP_ISNORM(q->cell.cp)) ? PBCH_RE_CP_NORM_REP : PBCH_RE_CP_EXT_REP;
 
     ret = SRSLTE_SUCCESS;
   }
@@ -471,6 +627,32 @@ int decode_frame(srslte_pbch_t* q, uint32_t src, uint32_t dst, uint32_t n, uint3
   }
 }
 
+int srslte_rel16_pbch_mrc(cf_t* y, cf_t* h, cf_t* x, cf_t* theta, int nof_symbols, int nof_rep_symbols, float noise_estimate)
+{
+  int threshold_corr = 75, ret = 0;
+  int offset = (nof_rep_symbols == PBCH_RE_CP_NORM_REP ? 0 : 48); // For extended CP, the first PBCH OFDM symbol isn't repeated
+  int offset_rep = (nof_rep_symbols == PBCH_RE_CP_NORM_REP ? 72 : 0); // For normal CP, the first repeated symbol is the 10th, and then the 7, 8, 9 and 10, ignore the first 10th repetition
+  float abs = 0; 
+
+  srslte_vec_prod_ccc(&y[nof_symbols + offset_rep], theta, &y[nof_symbols + offset_rep], nof_rep_symbols); //Phase correction for the repeated symbols
+  cf_t corr = srslte_vec_dot_prod_conj_ccc(&y[offset], &y[nof_symbols + offset_rep], nof_rep_symbols); //Correlation between PBCH and (possibly) repeated PBCH
+  srslte_vec_abs_cf(&corr, &abs, 1);
+
+  if(abs>threshold_corr){ // Check if it's a rel-16 PBCH
+    cf_t r1 = 0, r2 = 0, hh = 0; // Maximum ratio combining (2x1)
+    ret = 1;
+    for (int i = offset; i < nof_symbols; i++) {
+      r1 += x[i] * conjf(h[i]);
+      r2 += x[nof_symbols + offset_rep + i] * conjf(h[nof_symbols + offset_rep + i]);
+      hh += (conjf(h[i]) * h[i]) + (conjf(h[nof_symbols + offset_rep + i]) * h[nof_symbols + offset_rep + i]);
+      x[offset] = (r1 + r2) / ((hh + noise_estimate));
+    }
+
+    INFO("Combined PBCH repetitions with correlation=%f\n", abs);
+  }
+  return ret;
+}
+
 /* Decodes the PBCH channel
  *
  * The PBCH spans in 40 ms. This function is called every 10 ms. It tries to decode the MIB
@@ -496,10 +678,12 @@ int srslte_pbch_decode(srslte_pbch_t*         q,
 
   if (q != NULL && sf_symbols != NULL) {
     cf_t* slot1_symbols = &sf_symbols[0][SRSLTE_SLOT_LEN_RE(q->cell.nof_prb, q->cell.cp)];
-
+    cf_t* slot0_symbols = &sf_symbols[0][0];
+    cf_t* ce_slot0[SRSLTE_MAX_PORTS];
     cf_t* ce_slot1[SRSLTE_MAX_PORTS];
     for (int i = 0; i < SRSLTE_MAX_PORTS; i++) {
       ce_slot1[i] = &channel->ce[i][0][SRSLTE_SLOT_LEN_RE(q->cell.nof_prb, q->cell.cp)];
+      ce_slot0[i] = &channel->ce[i][0][0];
     }
 
     /* Set pointers for layermapping & precoding */
@@ -515,6 +699,10 @@ int srslte_pbch_decode(srslte_pbch_t*         q,
       ERROR("There was an error getting the PBCH symbols\n");
       return SRSLTE_ERROR;
     }
+    if (q->nof_rep_symbols != srslte_pbch_get_rep(slot0_symbols, &q->symbols[0][q->nof_symbols], q->cell)) {
+      ERROR("There was an error getting the repeated PBCH symbols\n");
+      return SRSLTE_ERROR;
+    }
 
     /* extract channel estimates */
     for (i = 0; i < q->cell.nof_ports; i++) {
@@ -522,6 +710,40 @@ int srslte_pbch_decode(srslte_pbch_t*         q,
         ERROR("There was an error getting the PBCH symbols\n");
         return SRSLTE_ERROR;
       }
+    }
+    for (i = 0; i < q->cell.nof_ports; i++) {
+      if (q->nof_rep_symbols != srslte_pbch_get_rep(ce_slot0[i], &q->ce[i][q->nof_symbols], q->cell)) {
+        ERROR("There was an error getting the repeated PBCH symbols\n");
+        return SRSLTE_ERROR;
+      }
+    }
+    if (SRSLTE_VERBOSE_ISDEBUG()) {
+      char filename[FILENAME_MAX];
+      DEBUG("SAVED FILE subframe_CAS.dat: received subframe symbols\n");
+      srslte_vec_save_file("subframe_CAS.dat", sf_symbols[0], SRSLTE_NOF_RE(q->cell) * sizeof(cf_t));
+      //DEBUG("SAVED FILE hestCAS.dat: channel estimates for port 4\n");
+      DEBUG("nof_prb=%d, cp=%d, nof_re=%d, grant_re=%d\n",
+             q->cell.nof_prb,
+             q->cell.cp,
+             SRSLTE_NOF_RE(q->cell),
+             q->nof_symbols);
+      for (int i = 0; i < q->cell.nof_ports; i++) {
+        if (snprintf(filename, FILENAME_MAX, "hest_%d_pbch.dat", i) < 0) {
+          ERROR("Generating file name");
+          break;
+        }
+        DEBUG("SAVED FILE %s: channel estimates for Rx %d\n", filename, i);
+        srslte_vec_save_file(filename, q->ce[i], (q->nof_symbols + q->nof_rep_symbols) * sizeof(cf_t));
+
+        if (snprintf(filename, FILENAME_MAX, "hest_%d_.dat", i) < 0) {
+          ERROR("Generating file name");
+          break;
+        }
+        DEBUG("SAVED FILE %s: channel estimates for Rx %d\n", filename, i);
+        srslte_vec_save_file(filename, channel->ce[i][0], SRSLTE_NOF_RE(q->cell) * sizeof(cf_t));
+      }
+      DEBUG("SAVED FILE pbch_symbols.dat: symbols before equalization (slot1)\n");
+      srslte_vec_save_file("pbch_symbols.bin", q->symbols[0], (q->nof_symbols + q->nof_rep_symbols) * sizeof(cf_t));
     }
 
     q->frame_idx++;
@@ -543,7 +765,8 @@ int srslte_pbch_decode(srslte_pbch_t*         q,
         /* in control channels, only diversity is supported */
         if (nant == 1) {
           /* no need for layer demapping */
-          srslte_predecoding_single(q->symbols[0], q->ce[0], q->d, NULL, q->nof_symbols, 1.0f, channel->noise_estimate);
+          srslte_predecoding_single(q->symbols[0], q->ce[0], q->d, NULL,  q->nof_symbols + q->nof_rep_symbols, 1.0f, channel->noise_estimate);
+          srslte_rel16_pbch_mrc(q->d, q->ce[0], q->symbols[0], q->theta, q->nof_symbols, q->nof_rep_symbols, channel->noise_estimate);
         } else {
           srslte_predecoding_diversity(q->symbols[0], q->ce, x, nant, q->nof_symbols, 1.0f);
           srslte_layerdemap_diversity(x, q->d, nant, q->nof_symbols / nant);

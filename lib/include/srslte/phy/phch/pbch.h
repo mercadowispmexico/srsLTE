@@ -50,18 +50,22 @@
 #define SRSLTE_BCH_ENCODED_LEN 3 * (SRSLTE_BCH_PAYLOADCRC_LEN)
 
 #define SRSLTE_PBCH_MAX_RE 256 // make it avx2-aligned
+#define SRSLTE_MAX_NOF_REP_PBCH_SYMBOLS 5
+#define SRSLTE_NOF_REP_PBCH_SYMBOLS(cp) (cp == SRSLTE_CP_NORM ? SRSLTE_MAX_NOF_REP_PBCH_SYMBOLS : 3)
 
 /* PBCH object */
 typedef struct SRSLTE_API {
   srslte_cell_t cell;
 
   uint32_t nof_symbols;
+  uint32_t nof_rep_symbols;
 
   /* buffers */
   cf_t*    ce[SRSLTE_MAX_PORTS];
   cf_t*    symbols[SRSLTE_MAX_PORTS];
   cf_t*    x[SRSLTE_MAX_PORTS];
   cf_t*    d;
+  cf_t*    theta;
   float*   llr;
   float*   temp;
   float    rm_f[SRSLTE_BCH_ENCODED_LEN];
